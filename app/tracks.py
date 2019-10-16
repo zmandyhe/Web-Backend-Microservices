@@ -6,7 +6,7 @@ import sqlite3;
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
-app.config["DEBUG"] = True;
+#app.config.from_envvar('APP_CONFIG');
 
 # This is a helper function to convert the database rows returned into dictionaries.
 def dict_factory(cursor, row):
@@ -53,47 +53,47 @@ def check_uniqueness(track, album, artist):
 # functionality
 @app.route("/", methods=["GET"])
 def tracks_home():
-    return '''<h1>Welcome to the tracks microservice API!</h1>
+    return '''<h1>Welcome to the Tracks Microservice API!</h1>
     <p>This is a documentation page for the way to interface with
     the tracks microservice via Create, Retrieve, Edit, and Delete functions.</p>
 
     <h2>Create</h2>
-    URL: <i>/api/v1/resources/tracks</i>, METHOD: POST
+    URL: <i>/api/v1/resources/tracks</i>, METHOD: POST <br/>
     <p>This function allows you to add new tracks to the database through
     a POST request. On success, it'll give the user back a 201 - Created.
     On failure, it'll return a 409 - Conflict. A failure is usually due to
     the track already existing in the database or lack of enough required
     data.</p>
 
-    <p>Example Call:
-        /api/v1/resource/tracks
-        {
-            "track_name":"I Ain't Got Time",
-            "album_name":"Flower Boy",
-            "artist":"Tyler, The Creator",
-            "track_len":"3:25",
-            "track_URL":"file://...",
-            "art_URL":"file://..."
+    <p>Example Call: <br/>
+        /api/v1/resource/tracks <br/>
+        { <br/>
+            "track_name":"I Ain't Got Time", <br/>
+            "album_name":"Flower Boy", <br/>
+            "artist":"Tyler, The Creator", <br/>
+            "track_len":"3:25", <br/>
+            "track_URL":"file://...", <br/>
+            "art_URL":"file://..." <br/>
         }
     </p>
 
     <h2>Retrieve</h2>
-    URL: <i>/api/v1/resources/tracks</i>, METHOD: GET
+    URL: <i>/api/v1/resources/tracks</i>, METHOD: GET <br/>
     <p>This function allows you to retrieve tracks from the tracks table. The user
     will perform a GET request on the tracks endpoint, and it will take the search
     parameters of track name, album name, and/or artist. It returns a 200 and the data
     if the data is in the table, and a 404 with an error message if not.
 
-    <p>Example Call:
-        /api/v1/resource/tracks?track_name=My+Slumbering+Heart&artist=Rilo+Kiley
-    Which returns:
-        {
-            "track_name":"My Slumbering Heart",
-            "album_name":"The Execution of All Things",
-            "artist":"Rilo Kiley",
-            "track_len":"5:36",
-            "track_URL":"file://...",
-            "art_URL":"file://..."
+    <p>Example Call: <br/>
+        /api/v1/resource/tracks?track_name=My+Slumbering+Heart&artist=Rilo+Kiley <br/>
+    Which returns: <br/>
+        { <br/>
+            "track_name":"My Slumbering Heart", <br/>
+            "album_name":"The Execution of All Things", <br/>
+            "artist":"Rilo Kiley", <br/>
+            "track_len":"5:36", <br/>
+            "track_URL":"file://...", <br/>
+            "art_URL":"file://..." <br/>
         }
     </p>
     '''
@@ -202,13 +202,78 @@ def track_retrieve():
 # End of track_retrieve()
 
 # This function runs when the users attempts to edit a track from the
-# database. The user can search
-#   On success, return a 200 - OK, with the data
+# database. The user can search for a track and then edit it. This will use the
+# PUT HTTP verb. Since we're essientally going to get two pieces of information
+# from the user (i.e. a query to look up, and the data to replace it with) that
+# we're going to use the GET "way" of argument passing in the URL for the search
+# query, and the POST way of getting the body contents for the updated information.
+#   On success, return a 200 - OK, with the updated data
 #   On failure, return a 404 - Not Found, with an error
-# NOTE: This code follows very closely to the code provided to us in the Science
-# Fiction Book example.
-#@app.route("/api/v1/resources/tracks", methods=["GET"])
-#def track_retrieve():
+# NOTE: This will only deal with finding a single track -- unlike the retrieval
+# function -- since editing multiple tracks is difficult without a solid front-end.
+@app.route("/api/v1/resources/tracks", methods=["PUT"])
+def track_edit():
+    # This will repeat the search functionality of the retrieve method, but
+    # slimmed down for editing.
+    track = request.args.get('track_name');
+
+    # Make sure the user typed in a track title to look up
+    if not track:
+        return "<h1>Failure</h1><p>You must specify a track name in the URL \
+        to look up!</p>", 404;
+
+    # And check to see if it's in the database
+    query = "SELECT * FROM tracks WHERE title=?;";
+    cur = get_db().execute(query, [track]);
+    result = cur.fetchall();
+    cur.close();
+
+    if not result:
+        return "<h1>Failure!</h1><p>The track that you've searched for is not \
+        in the database. Either correct your spelling, or try adding it to \
+        the database first!</p>", 404;
+
+    # Next, we parse the update information by checking to see if the user suppied
+    # the information. For each field they supplied information to, we'll collect
+    # them and pass them as a parameter list to an execute function.
+    query = "UPDATE tracks SET";
+    update_info = [];
+
+    # NOTE: Current issue with this method is finding out if a user populated any
+    # of these fields with information meanwhile needing the ones that aren't changed
+    # to still be there, just without information.
+    if request.form['track_name']:
+        query += ' title=?,';
+        update_info.append(request.form['track_name']);
+    if request.form['album_name']:
+        query += ' album=?,';
+        update_info.append(request.form['album_name']);
+    if request.form['artist']:
+        query += ' artist=?,';
+        update_info.append(request.form['artist']);
+    if request.form['track_len']:
+        query += '  len=?,';
+        update_info.append(request.form['track_len']);
+    if request.form['track_URL']:
+        query += ' track_url=?,';
+        update_info.append(request.form['track_URL']);
+    if request.form['art_URL']:
+        query += ' art_url=?,';
+        update_info.append(request.form['art_URL']);
+
+    # Remove the trailing comma, and finish the rest of the query string.
+    query = query[:-1] + " WHERE title=?;";
+    update_info.append(track);
+    # Execute the update
+    conn = get_db()
+    cur = conn.cursor();
+    cur.execute(query, update_info);
+    conn.commit();
+    cur.close();
+
+    return "<h1>Success!</h1><p>You have updated the information of record: " \
+            + track + "!</p>", 200;
+# End of track_edit()
 
 
 # This will be a special function that is a generic File Not Found error
