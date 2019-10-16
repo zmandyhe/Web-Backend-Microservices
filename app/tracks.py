@@ -86,7 +86,7 @@ def tracks_home():
 
     <p>Example Call: <br/>
         /api/v1/resource/tracks?track_name=My+Slumbering+Heart&artist=Rilo+Kiley <br/>
-    Which returns: <br/>
+    <b>Which returns:</b> <br/>
         { <br/>
             "track_name":"My Slumbering Heart", <br/>
             "album_name":"The Execution of All Things", <br/>
@@ -95,6 +95,47 @@ def tracks_home():
             "track_URL":"file://...", <br/>
             "art_URL":"file://..." <br/>
         }
+    </p>
+
+    <h2>Edit</h2>
+    URL: <i>/api/v1/resources/tracks</i>, METHOD: PUT <br/>
+    <p> This function allows the user to edit tracks that already exist in the database. It
+    has a unique way of deliving the information to the function. Half of it is in the URL
+    in a GET request type way, and the other half sits in the body like a POST request. The
+    URL parameter is the name of the track you want to change, and the body data contains the
+    new information. Because of a fluke in the way sqlite statements are handled in Python,
+    if the user wants something to remain UNCHANGED, then they will still have to have that
+    body variable present, just empty.
+    This function returns a 200 OK on success, and a 404 Not Found if the record didn't
+    exist in the table to begin with.
+    </p>
+
+    <p>Example Call: <br/>
+        /api/v1/resource/tracks?track_name=Runner <br/>
+    <br/>
+        { <br/>
+            "track_name":"", <br/>
+            "album_name":"The Execution of All Things (Remastered)", <br/>
+            "artist":"", <br/>
+            "track_len":"4:30", <br/>
+            "track_URL":"file://...", <br/>
+            "art_URL":"" <br/>
+        } <br/>
+    <i>NOTE: This reads: the track whose data we want to change is "Runner" (URL), and
+    the data that we WANT changed are the album_name, track_len, and the track_URL. The
+    rest remains unchanged (blank).</i>
+    </p>
+
+    <h2>Delete</h2>
+    URL: <i>/api/v1/resources/tracks</i>, METHOD: DELETE <br/>
+    <p>This function allows a user to delete a record out of the tracks table. This will
+    use a straight-forward GET (URL) style parameter passing. It takes one parameter which
+    is the track to remove.
+    This function returns a 200 OK on success, and a 404 Not Found if the record didn't
+    exist in the table to begin with.</p>
+
+    <p>Example Call: <br/>
+        /api/v1/resource/tracks?track_name=My+Slumbering+Heart<br/>
     </p>
     '''
 # End of tracks_home()
@@ -275,6 +316,44 @@ def track_edit():
             + track + "!</p>", 200;
 # End of track_edit()
 
+# This function allows the user to delete tracks from the database. It's going
+# to work along the same lines as the edit function, but just a bit simpler since
+# it needs to only delete the record.
+#   On success, return a 200 - OK, with a positive message
+#   On failure, return a 404 - Not Found, with an error
+@app.route("/api/v1/resources/tracks", methods=["DELETE"])
+def track_delete():
+    # This will repeat the search functionality of the retrieve method, but
+    # slimmed down for deleting
+    track = request.args.get('track_name');
+
+    # Make sure the user typed in a track title to look up
+    if not track:
+        return "<h1>Failure</h1><p>You must specify a track name in the URL \
+        to look up!</p>", 404;
+
+    # And check to see if it's in the database
+    query = "SELECT * FROM tracks WHERE title=?;";
+    cur = get_db().execute(query, [track]);
+    result = cur.fetchall();
+    cur.close();
+
+    if not result:
+        return "<h1>Failure!</h1><p>The track that you've searched for is not \
+        in the database. Either correct your spelling, or try adding it to \
+        the database first!</p>", 404;
+
+    # So, now we know the record exists, and we can safely delete it.
+    query = "DELETE FROM tracks WHERE title=?;";
+    conn = get_db()
+    cur = conn.cursor();
+    cur.execute(query, [track]);
+    conn.commit();
+    cur.close();
+
+    return "<h1>Success!</h1><p>You have deleted the record of track: " \
+            + track + "!</p>", 200;
+# End of track_delete()
 
 # This will be a special function that is a generic File Not Found error
 # handler that will just spit out a message that let's the user know they've
