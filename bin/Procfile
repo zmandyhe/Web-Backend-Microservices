@@ -1,1 +1,4 @@
-api: flask run -p $PORT
+tracks: FLASK_APP=../app/tracks.py FLASK_ENV=development flask run -p $PORT
+playlist: FLASK_APP=../app/playlist.py FLASK_ENV=development flask run -p $PORT
+users: FLASK_APP=../app/users.py FLASK_ENV=development flask run -p $PORT
+desc: FLASK_APP=../app/desc.py FLASK_ENV=development flask run -p $PORT

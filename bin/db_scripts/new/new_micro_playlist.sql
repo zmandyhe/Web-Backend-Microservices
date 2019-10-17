@@ -1,6 +1,5 @@
 -- This file defines the schema for a new database. It contains four tables; one for
 -- each of our microservices: Tracks, Playlists, Users, and Descriptions.
--- TODO: Figure out Primary/Forign Keys. Finish the rest of the tables.
 
 PRAGMA foreign_keys=ON;
 BEGIN TRANSACTION;
@@ -9,9 +8,33 @@ BEGIN TRANSACTION;
         title VARCHAR NOT NULL,
         album VARCHAR NOT NULL,
         artist VARCHAR NOT NULL,
-        len VARCHAR NOT NULL, -- TODO: Keep as VARCHAR?
+        len VARCHAR NOT NULL, 
         track_url VARCHAR NOT NULL,
         art_url VARCHAR,
         PRIMARY KEY(title, album, artist)
+    );
+
+    DROP TABLE IF EXISTS playlists;
+    CREATE TABLE playlists (
+        playlist_title VARCHAR NOT NULL PRIMARY KEY,
+        playlist_track_url VARCHAR,
+        username VARCHAR,
+        description VARCHAR
+    );
+
+    DROP TABLE IF EXISTS users;
+    CREATE TABLE users (
+        username VARCHAR NOT NULL UNIQUE PRIMARY KEY,
+        pwd_hash VARCHAR,
+        displayname VARCHAR,
+        email VARCHAR NOT NULL UNIQUE,
+        url VARCHAR
+    );
+
+    DROP TABLE IF EXISTS desc;
+    CREATE TABLE desc (
+        username VARCHAR,
+        tracktitle VARCHAR,
+        trackdesc VARCHAR
     );
     COMMIT;
