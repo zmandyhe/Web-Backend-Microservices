@@ -17,9 +17,13 @@ BEGIN TRANSACTION;
     DROP TABLE IF EXISTS playlists;
     CREATE TABLE playlists (
         playlist_title VARCHAR NOT NULL PRIMARY KEY,
-        playlist_track_url VARCHAR,
+        track_url VARCHAR,
         username VARCHAR,
-        description VARCHAR
+        description VARCHAR,
+	FOREIGN KEY(track_url) 
+	  REFERENCES tracks (track_url) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE
     );
 
     DROP TABLE IF EXISTS users;
@@ -34,7 +38,11 @@ BEGIN TRANSACTION;
     DROP TABLE IF EXISTS desc;
     CREATE TABLE desc (
         username VARCHAR,
-        tracktitle VARCHAR,
-        trackdesc VARCHAR
+        trackdesc VARCHAR,
+	track_url VARCHAR,
+	FOREIGN KEY(track_url) 
+	  REFERENCES tracks (track_url) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE
     );
     COMMIT;

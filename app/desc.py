@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, g, Response
 import sqlite3
 import json
 from werkzeug.security import generate_password_hash,check_password_hash
-from os.path import isfile
+#from os.path import isfile
 
 
 app = Flask(__name__)
@@ -25,24 +25,20 @@ def convert_to_json():
 '''homepage'''
 @app.route('/', methods=['GET'])
 def home():
-    return '''<h1>Welcome to Description Microservice</h1>
-<h2>User below API endpoints for operations</h2>
-<p>/api/v1/resource/desc/newdesc: Set a user’s description of a track.</p>
-<p>/api/v1/resource/desc/profile: Retrieve a user’s description of a track.</p>'''
-
+    return'''<h1> Welcome to Description Microservice </h1>'''
 
 
 '''endpoint to retrieve a user's description of a track'''
-@app.route('/api/v1/resource/desc/profile', methods = ['GET'])
+@app.route('/api/v1/resources/desc/profile', methods = ['GET'])
 def get_user_profile():
     # conn = sqlite3.connect('desc.db', check_same_thread=False)
     conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
     username = query_parameters.get("username")
-    tracktitle = query_parameters.get("tracktitle")
-    if username is not None and tracktitle is not None:
-        query = "SELECT username,tracktitle,trackdesc FROM desc WHERE username=username AND tracktitle=tracktitle"
+    track_url= query_parameters.get("track_url")
+    if username is not None and track_url is not None:
+        query = "SELECT username,track_url,trackdesc FROM desc WHERE username=username AND track_url=track_url"
         result = cur.execute(query)
         items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
         cur.close()
@@ -55,15 +51,20 @@ def get_user_profile():
 
 
 #function to set a track's description by a user
-@app.route('/api/v1/resource/desc/newdesc',methods=['POST','GET'])
+@app.route('/api/v1/resources/desc/newdesc',methods=['POST'])
 def sql_set_desc():
     # conn = sqlite3.connect('desc.db', check_same_thread=False)
     conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    desc_dict = convert_to_json()
-    user_desc = (desc_dict["username"], desc_dict["tracktitle"],desc_dict["trackdesc"])
-    cur.execute(''' INSERT INTO desc (username,tracktitle,trackdesc) VALUES (?,?,?) ''', user_desc)
+    query_parameters = request.args
+    username = query_parameters.get("username")
+    trackdesc = query_parameters.get("trackdesc")
+    track_url = query_parameters.get("track_url")
+    track_desc = (username,trackdesc,track_url)
+    # desc_dict = convert_to_json()
+    # user_desc = (desc_dict["username"], desc_dict["tracktitle"],desc_dict["trackdesc"])
+    cur.execute(''' INSERT INTO desc (username,trackdesc,track_url) VALUES (?,?,?) ''', track_desc)
     conn.commit()
     #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
     items = cur.fetchall()
@@ -72,8 +73,8 @@ def sql_set_desc():
         return page_not_found(404)
     else:
         #return items
-        return Response(json.dumps(desc_dict, indent=4),mimetype="application/json",status=201)
+        return Response(json.dumps(track_desc, indent=4),mimetype="application/json",status=201)
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=6789)

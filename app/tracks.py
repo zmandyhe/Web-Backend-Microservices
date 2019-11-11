@@ -366,4 +366,4 @@ def page_not_found(e):
 # End of page_not_found
 
 # Finally, spin up our little app!
-app.run();
+app.run(debug=True, port=3456);

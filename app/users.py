@@ -40,7 +40,7 @@ def home():
 @app.route('/api/v1/resource/users/all', methods=['GET'])
 def list_all_users():
     if request.method == 'GET':
-        conn = sqlite3.connect('users/users.db', check_same_thread=False)
+        conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
         cur = conn.cursor()
         query = "SELECT * FROM users"
         result = cur.execute(query)
@@ -65,57 +65,27 @@ def sql_create_user_by_input():
     email = query_parameters.get("email")
     url = query_parameters.get("url")
     pwd_hash = generate_password_hash(password)
-    newuser_dict={"username":username,
-                "pwd_hash": pwd_hash,
-                 "displayname": displayname,
-                 "email": email,
-                 "url":url}
+    # newuser_dict={"username":username,
+    #             "pwd_hash": pwd_hash,
+    #              "displayname": displayname,
+    #              "email": email,
+    #              "url":url}
     if username is not None and pwd_hash is not None and displayname is not None and email is not None:
         try:
             user = (username, pwd_hash, displayname,email,url)
             result = cur.execute(''' INSERT INTO users (username,pwd_hash,displayname,email,url) VALUES (?,?,?,?,?) ''', user )
             conn.commit()
-#            items = cur.fetchall()
-            #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
             cur.close()
- #           if items is None:
-  #              return page_not_found(404)
-   #         else:
-            return <h1>Success</h1>
-            #return Response("<h1>Success</h1>",headers={'Content-Type':'application/json'},status=201)
+            return Response("<h1>Success</h1>",headers={'Content-Type':'application/json'},status=201)
         except Exception as err:
             return ('Query Failed: %s\nError HTTP 409 Conflict., username and email must be unique %s' % (''' INSERT INTO users''', str()))
     else:
         return ("input query parameter")
 
 
-#function to set a track's description by a user
-@app.route('/api/v1/resource/users/newuserbyjson',methods=['POST'])
-def sql_create_user_by_json():
-    # conn = sqlite3.connect('users/users.db', check_same_thread=False)
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    user_dict = convert_to_json()
-    user = (user_dict["username"], user_dict["pwd_hash"],user_dict["displayname"],user_dict["email"],user_dict["url"])
-    try:
-        cur.execute(''' INSERT INTO users (username,pwd_hash,displayname,email,url) VALUES (?,?,?,?,?) ''', user)
-        conn.commit()
-        #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-        items = cur.fetchall()
-        cur.close()
-        if items is None:
-            return page_not_found(404)
-        else:
-            return Response(json.dumps(user_dict, indent=4),mimetype="application/json",status=201)
-    except Exception as err:
-        return ('Query Failed: %s\nError: HTTP 409 Conflict. %s' % (''' INSERT INTO users''', str()))
-
-
 #function to update a user's password
 @app.route('/api/v1/resource/users/password',methods = ['PUT'])
-def sql_dataedit():
-    # conn = sqlite3.connect('users/users.db', check_same_thread=False)
+def sql_dataedit_password():
     conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
@@ -131,7 +101,7 @@ def sql_dataedit():
             items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
             username_stored = items[0]['username']
             if username_stored != username:
-                return"username is not correct"
+                return"username is not in the database yet, you may want to create a username"
             else:
                 pw_old_stored = items[0]["pwd_hash"]
                 is_valid = check_password_hash(pw_old_stored,pw_old)
@@ -142,16 +112,16 @@ def sql_dataedit():
                         result2=cur.execute(''' UPDATE users set pwd_hash=? WHERE pwd_hash=? ''', (new_pw_hashed,pw_old_stored))
                         conn.commit()
                         cur.close()
-                        items = [dict(zip([key[0] for key in cur.description], row)) for row in result2]
-                        if items is None:
-                            return page_not_found(404)
-                        else:
-                            return Response(json.dumps(items, sort_keys=False), "200 OK,The user password is changed successfully", headers={'Content-Type':'application/json'},status=200)
+                        # items = [dict(zip([key[0] for key in cur.description], row)) for row in result2]
+                        # if items is None:
+                        #     return page_not_found(404)
+                        # else:
+                        return Response("200 OK,The user password is changed successfully", headers={'Content-Type':'application/json'},status=200)
                     except Exception as err:
                         return ('Query Failed: %s\nError: %s' % (''' UPDATE INTO users''', str()))
                 else:
                     return "password does not match"
-        return "input username and password in the request parameter starting with ?", 404
+        # return "input username and password in the request parameter starting with ?", 404
     return "input request parameters:username and password"
 
 #retrieve a user's profile
@@ -164,18 +134,17 @@ def get_user_profile():
     username = query_parameters.get("username")
     query = "SELECT username,displayname,email,url FROM users WHERE username=?"
     result = cur.execute(query, (username,))
-    items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
+    r = result.fetchone()
     cur.close()
-    if items is None:
-        return page_not_found(404)
+    if r is None:
+        return "this username is not in the database"
     else:
-        return Response(json.dumps(items[0], sort_keys=False),headers={'Content-Type':'application/json'},status=200)
+        return Response(json.dumps((r), sort_keys=False),headers={'Content-Type':'application/json'},status=200)
 
 
 #delete a user
 @app.route('/api/v1/resource/users/removal', methods = ['DELETE'])
 def delete_user():
-    # conn = sqlite3.connect('users/users.db', check_same_thread=False)
     conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
     cur = conn.cursor()
     username = request.args.get('username')
