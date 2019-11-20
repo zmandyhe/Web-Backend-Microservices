@@ -3,6 +3,9 @@
 import flask;
 from flask import request, jsonify, g;
 import sqlite3;
+import uuid
+from itertools import chain
+import json
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
@@ -22,10 +25,40 @@ def get_db():
     # If not, then open a connection.
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect("../var/micro_playlist.db");
+        db = g._database = sqlite3.connect("../var/microservices_db.db");
         db.row_factory = dict_factory;
     return db;
 # End of get_db()
+
+
+def get_uuid():
+	sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
+	sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
+	uuid_data = uuid.uuid4()
+	return uuid_data
+
+
+def get_which_db(uuid_data):
+	# sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
+	# sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
+	data = uuid_data.int
+	mod_id = data % 3
+	if mod_id == 0:
+		which_db = "../var/tracks_shard0.db"
+	elif mod_id == 1:
+		which_db = "../var/tracks_shard1.db"
+	else:
+		which_db = "../var/tracks_shard2.db"
+	return which_db
+
+
+def get_db_by_uuid(which_db):
+	db = getattr(g,'_database', None)
+	if db is None:
+		db = g._database = sqlite3.connect(which_db, detect_types=sqlite3.PARSE_DECLTYPES)
+		db.row_factory = dict_factory
+	return db
+
 
 # This is a special helper function for clean-up detail. Currently, it is only
 # used to tear down the database connection.
@@ -148,6 +181,10 @@ def track_create():
     # First, we need to make sure that the required fields are populated. These
     # are the Title, Album Title, Artist, Length, and the URL for file. There is
     # one field that is optional which is the URL for the Album Art.
+    # data, which_db = get_uuid_and_which_db()
+    guid = get_uuid()
+    print(guid)
+    which_db = get_which_db(guid)
     error = None;
     if not request.form['track_name']:
         error = "Track Name Missing!";
@@ -159,24 +196,28 @@ def track_create():
         error = "Track Length Missing!"
     elif not request.form["track_URL"]:
         error = "Track's URL Missing!"
+    elif not request.form["art_URL"]:
+        error = "art's URL Missing!"
 
-    # Next, we check that the this specific track doesn't already exist. However,
-    # just the track name won't be unique enough since it could be a cover or on
-    # two seperate albums. For this reason, we're going to check it see if the
-    # combination of track, artist, and album should be unique enough.
-    elif check_uniqueness(request.form['track_name'], request.form['album_name'],
-            request.form['artist']) is False:
-        error = "This track already exists in the database!";
-    else:
-        # Given that we haven't failed any of the above checks, we are ready to
-        # open a connection and insert the new record.
-        conn = get_db();
-        cur = conn.cursor();
-        cur.execute("INSERT INTO tracks(title, album, artist, len, track_url, art_url) \
-                VALUES(?,?,?,?,?,?);", (request.form['track_name'], request.form['album_name'],\
-                request.form['artist'], request.form['track_len'], request.form['track_URL'],\
-                request.form['art_URL']));
-        conn.commit();
+    # Given that we haven't failed any of the above checks, we are ready to
+    # open a connection and insert the new record.
+    #conn = get_db();
+    # data, which_db = get_uuid_and_which_db()
+    #conn = get_db_uuid(which_db)
+    conn = get_db_by_uuid(which_db)
+    cur = conn.cursor();
+    cur.execute("INSERT INTO tracks(guid, title, album, artist, len, track_url, art_url) \
+            VALUES(?,?,?,?,?,?,?);", (guid, request.form['track_name'], request.form['album_name'],\
+            request.form['artist'], request.form['track_len'], request.form['track_URL'],\
+            request.form['art_URL']));
+    conn.commit();
+    # print(guid)
+    # conn.text_factory = str
+    # cur = conn.cursor()
+    # cur.execute('SELECT * from tracks')
+    # tracklist = cur.fetchall()
+    # print(tracklist)
+    cur.close()
 
     if error:
         ret_str = "<h1>Oops!</h1> <p>Looks like there was a problem inserting a new record \
@@ -184,7 +225,7 @@ def track_create():
         return ret_str, 409;
     else:
         ret_str = "<h1>Success!</h1><p>This record was successfully added to the service!</p> \
-                Track: " + request.form['track_name'] + \
+        		Track: " + request.form['track_name'] + \
                 "Album: " +  request.form['album_name'] + \
                 "Artist: " + request.form['artist'] + \
                 "Length: " + request.form['track_len'] + \
@@ -206,32 +247,25 @@ def track_retrieve():
     # Since we're going to be using the incoming variables a lot, let's get
     # them into more managable variables.
     query_params = request.args;
-    track = query_params.get('track_name');
-    album = query_params.get('album_name');
-    artist = query_params.get('artist');
+    guid = query_params.get('guid')
+    print(guid)
+    # track = query_params.get('track_name');
+    # album = query_params.get('album_name');
+    # artist = query_params.get('artist');
 
     # Now we can check to see which items the user submitted, and build our
     # query string.
-    query = "SELECT * FROM tracks WHERE";
-    to_filter = [];
+    query = '''SELECT * FROM tracks WHERE guid = ?'''
 
-    if track:
-        query += ' title=? AND';
-        to_filter.append(track);
-    if album:
-        query += ' album=? AND';
-        to_filter.append(album);
-    if artist:
-        query += ' artist=? AND';
-        to_filter.append(artist);
-    if not (track or album or artist):
-        return "<h1>You must fill in at least one search query term!</h1>", 404;
-
-    # Do some final trimming and append a semicolon onto our query
-    query = query[:-4] +';';
+    if not (guid):
+        return "<h1>You must fill in the trac unique id!</h1>", 404;
 
     # Finally, query the database and return the results!
-    cur = get_db().execute(query, to_filter);
+    #cur = get_db().execute(query, to_filter);
+    which_db = get_which_db(guid)
+    conn = get_db_by_uuid(which_db)
+    cur = conn.cursor()
+    item = cur.execute(query, (guid,))
     results = cur.fetchall();
     cur.close();
 
@@ -256,7 +290,8 @@ def track_retrieve():
 def track_edit():
     # This will repeat the search functionality of the retrieve method, but
     # slimmed down for editing.
-    track = request.args.get('track_name');
+    #track = request.args.get('track_name');
+    guid = request.args.get("guid")
 
     # Make sure the user typed in a track title to look up
     if not track:
@@ -264,8 +299,10 @@ def track_edit():
         to look up!</p>", 404;
 
     # And check to see if it's in the database
-    query = "SELECT * FROM tracks WHERE title=?;";
-    cur = get_db().execute(query, [track]);
+    query = "SELECT * FROM tracks WHERE guid=?;";
+    #cur = get_db().execute(query, [track]);
+    which_db = get_which_db(guid)
+    conn = get_db_by_uuid(which_db).execute(query,[guid])
     result = cur.fetchall();
     cur.close();
 
@@ -306,7 +343,8 @@ def track_edit():
     query = query[:-1] + " WHERE title=?;";
     update_info.append(track);
     # Execute the update
-    conn = get_db()
+    #conn = get_db()
+    conn = get_db_by_uuid(which_db)
     cur = conn.cursor();
     cur.execute(query, update_info);
     conn.commit();
@@ -325,7 +363,7 @@ def track_edit():
 def track_delete():
     # This will repeat the search functionality of the retrieve method, but
     # slimmed down for deleting
-    track = request.args.get('track_name');
+    guid = request.args.get('guid');
 
     # Make sure the user typed in a track title to look up
     if not track:
@@ -333,8 +371,9 @@ def track_delete():
         to look up!</p>", 404;
 
     # And check to see if it's in the database
-    query = "SELECT * FROM tracks WHERE title=?;";
-    cur = get_db().execute(query, [track]);
+    query = "SELECT * FROM tracks WHERE guid=?;";
+    which_db = get_which_db(guid)
+    cur = get_db_by_uuid(which_db).execute(query, [guid]);
     result = cur.fetchall();
     cur.close();
 
@@ -344,15 +383,15 @@ def track_delete():
         the database first!</p>", 404;
 
     # So, now we know the record exists, and we can safely delete it.
-    query = "DELETE FROM tracks WHERE title=?;";
-    conn = get_db()
+    query = "DELETE FROM tracks WHERE guid=?;";
+    conn = get_db_by_uuid(which_db)
     cur = conn.cursor();
-    cur.execute(query, [track]);
+    cur.execute(query, [guid]);
     conn.commit();
     cur.close();
 
     return "<h1>Success!</h1><p>You have deleted the record of track: " \
-            + track + "!</p>", 200;
+            + guid + "!</p>", 200;
 # End of track_delete()
 
 # This will be a special function that is a generic File Not Found error
@@ -364,6 +403,44 @@ def page_not_found(e):
     <p>You have turned the wrong way. There is nothing down this path. Please go \
     back to the root page, and use one of the functions of the interface.</p>", 404
 # End of page_not_found
+
+
+# #list all tracks
+# @app.route('/api/v1/resources/tracks/all', methods=['GET'])
+# def track_retrive_all():
+#     db1 = "../var/tracks_shard0.db"
+#     db2 = "../var/tracks_shard1.db"
+#     db3 = "../var/tracks_shard2.db"
+#     conn1 = sqlite3.connect(db1, check_same_thread=False)
+#     conn2 = sqlite3.connect(db2, check_same_thread=False)
+#     conn3 = sqlite3.connect(db3, check_same_thread=False)
+
+#     cur = conn1.cursor()
+#     query = "SELECT * FROM tracks"
+#     result = cur.execute(query)
+#     items_1 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
+#     cur.close()
+
+#     cur = conn2.cursor()
+#     query = "SELECT * FROM tracks"
+#     result = cur.execute(query)
+#     items_2 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
+#     cur.close()
+
+#     cur = conn3.cursor()
+#     query = "SELECT * FROM tracks"
+#     result = cur.execute(query)
+#     items_3 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
+#     cur.close()
+
+#     items = dict(chain(items_1.items(),items_2.items(),items_3.items()))
+
+
+#     if items is None:
+#         return page_not_found(404)
+#     else:
+#         return Response(json.dumps(items, sort_keys=False), 200, {'Content-Type': 'application/json'})
+
 
 # Finally, spin up our little app!
 app.run(debug=True, port=3456);
