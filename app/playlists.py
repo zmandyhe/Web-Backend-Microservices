@@ -22,7 +22,7 @@ def get_db():
     # If not, then open a connection.
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect("../var/micro_playlist.db");
+        db = g._database = sqlite3.connect("../var/microservices_db.db");
         db.row_factory = dict_factory;
     return db;
 # End of get_db()

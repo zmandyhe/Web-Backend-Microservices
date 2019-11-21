@@ -40,7 +40,7 @@ def home():
 @app.route('/api/v1/resource/users/all', methods=['GET'])
 def list_all_users():
     if request.method == 'GET':
-        conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+        conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
         cur = conn.cursor()
         query = "SELECT * FROM users"
         result = cur.execute(query)
@@ -55,7 +55,7 @@ def list_all_users():
 #function to create a new user from query parameter in the api endpoint
 @app.route('/api/v1/resource/users/newuser',methods=['POST'])
 def sql_create_user_by_input():
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     # conn = sqlite3.connect('users/users.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
@@ -86,7 +86,7 @@ def sql_create_user_by_input():
 #function to update a user's password
 @app.route('/api/v1/resource/users/password',methods = ['PUT'])
 def sql_dataedit_password():
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
     username = query_parameters.get("username")
@@ -128,7 +128,7 @@ def sql_dataedit_password():
 @app.route('/api/v1/resource/users/profile', methods = ['GET'])
 def get_user_profile():
     # conn = sqlite3.connect('users/users.db', check_same_thread=False)
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
     username = query_parameters.get("username")
@@ -145,7 +145,7 @@ def get_user_profile():
 #delete a user
 @app.route('/api/v1/resource/users/removal', methods = ['DELETE'])
 def delete_user():
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     cur = conn.cursor()
     username = request.args.get('username')
     if username is not None:

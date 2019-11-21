@@ -32,7 +32,7 @@ def home():
 @app.route('/api/v1/resources/desc/profile', methods = ['GET'])
 def get_user_profile():
     # conn = sqlite3.connect('desc.db', check_same_thread=False)
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     cur = conn.cursor()
     query_parameters = request.args
     username = query_parameters.get("username")
@@ -54,7 +54,7 @@ def get_user_profile():
 @app.route('/api/v1/resources/desc/newdesc',methods=['POST'])
 def sql_set_desc():
     # conn = sqlite3.connect('desc.db', check_same_thread=False)
-    conn = sqlite3.connect('../var/micro_playlist.db', check_same_thread=False)
+    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     query_parameters = request.args

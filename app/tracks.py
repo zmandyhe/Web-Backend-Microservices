@@ -9,6 +9,8 @@ import json
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
+sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
+sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
 #app.config.from_envvar('APP_CONFIG');
 
 # This is a helper function to convert the database rows returned into dictionaries.
@@ -30,10 +32,7 @@ def get_db():
     return db;
 # End of get_db()
 
-
 def get_uuid():
-	sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
-	sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
 	uuid_data = uuid.uuid4()
 	return uuid_data
 
@@ -247,8 +246,9 @@ def track_retrieve():
     # Since we're going to be using the incoming variables a lot, let's get
     # them into more managable variables.
     query_params = request.args;
-    guid = query_params.get('guid')
-    print(guid)
+    guid_string = query_params.get('guid_string')
+    guid = uuid.UUID(guid_string)
+    print(type(guid))
     # track = query_params.get('track_name');
     # album = query_params.get('album_name');
     # artist = query_params.get('artist');
@@ -291,20 +291,23 @@ def track_edit():
     # This will repeat the search functionality of the retrieve method, but
     # slimmed down for editing.
     #track = request.args.get('track_name');
-    guid = request.args.get("guid")
+    guid_string = request.args.get("guid_string")
+    guid = uuid.UUID(guid_string)
 
     # Make sure the user typed in a track title to look up
-    if not track:
-        return "<h1>Failure</h1><p>You must specify a track name in the URL \
+    if not guid:
+        return "<h1>Failure</h1><p>You must specify a guid in the URL \
         to look up!</p>", 404;
 
     # And check to see if it's in the database
     query = "SELECT * FROM tracks WHERE guid=?;";
     #cur = get_db().execute(query, [track]);
     which_db = get_which_db(guid)
-    conn = get_db_by_uuid(which_db).execute(query,[guid])
-    result = cur.fetchall();
-    cur.close();
+    conn = get_db_by_uuid(which_db)
+    cur = conn.cursor()
+    result = cur.execute(query,[guid])
+    #result = cur.fetchall();
+    #cur.close();
 
     if not result:
         return "<h1>Failure!</h1><p>The track that you've searched for is not \
@@ -340,8 +343,8 @@ def track_edit():
         update_info.append(request.form['art_URL']);
 
     # Remove the trailing comma, and finish the rest of the query string.
-    query = query[:-1] + " WHERE title=?;";
-    update_info.append(track);
+    query = query[:-1] + " WHERE guid=?;";
+    update_info.append(guid);
     # Execute the update
     #conn = get_db()
     conn = get_db_by_uuid(which_db)
@@ -350,8 +353,7 @@ def track_edit():
     conn.commit();
     cur.close();
 
-    return "<h1>Success!</h1><p>You have updated the information of record: " \
-            + track + "!</p>", 200;
+    return "<h1>Success!</h1><p>You have updated the information of record</p>", 200;
 # End of track_edit()
 
 # This function allows the user to delete tracks from the database. It's going
@@ -363,18 +365,20 @@ def track_edit():
 def track_delete():
     # This will repeat the search functionality of the retrieve method, but
     # slimmed down for deleting
-    guid = request.args.get('guid');
+    guid_string = request.args.get('guid_string');
+    guid = uuid.UUID(guid_string)
 
     # Make sure the user typed in a track title to look up
-    if not track:
-        return "<h1>Failure</h1><p>You must specify a track name in the URL \
+    if not guid:
+        return "<h1>Failure</h1><p>You must specify a guid in the URL \
         to look up!</p>", 404;
 
     # And check to see if it's in the database
     query = "SELECT * FROM tracks WHERE guid=?;";
     which_db = get_which_db(guid)
-    cur = get_db_by_uuid(which_db).execute(query, [guid]);
-    result = cur.fetchall();
+    conn = get_db_by_uuid(which_db)
+    cur = conn.cursor()
+    result = cur.execute(query, (guid,))
     cur.close();
 
     if not result:
@@ -386,12 +390,11 @@ def track_delete():
     query = "DELETE FROM tracks WHERE guid=?;";
     conn = get_db_by_uuid(which_db)
     cur = conn.cursor();
-    cur.execute(query, [guid]);
+    cur.execute(query, (guid,));
     conn.commit();
     cur.close();
 
-    return "<h1>Success!</h1><p>You have deleted the record of track: " \
-            + guid + "!</p>", 200;
+    return "<h1>Success!</h1><p>You have deleted the record of track </p>", 200;
 # End of track_delete()
 
 # This will be a special function that is a generic File Not Found error
@@ -403,43 +406,6 @@ def page_not_found(e):
     <p>You have turned the wrong way. There is nothing down this path. Please go \
     back to the root page, and use one of the functions of the interface.</p>", 404
 # End of page_not_found
-
-
-# #list all tracks
-# @app.route('/api/v1/resources/tracks/all', methods=['GET'])
-# def track_retrive_all():
-#     db1 = "../var/tracks_shard0.db"
-#     db2 = "../var/tracks_shard1.db"
-#     db3 = "../var/tracks_shard2.db"
-#     conn1 = sqlite3.connect(db1, check_same_thread=False)
-#     conn2 = sqlite3.connect(db2, check_same_thread=False)
-#     conn3 = sqlite3.connect(db3, check_same_thread=False)
-
-#     cur = conn1.cursor()
-#     query = "SELECT * FROM tracks"
-#     result = cur.execute(query)
-#     items_1 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-#     cur.close()
-
-#     cur = conn2.cursor()
-#     query = "SELECT * FROM tracks"
-#     result = cur.execute(query)
-#     items_2 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-#     cur.close()
-
-#     cur = conn3.cursor()
-#     query = "SELECT * FROM tracks"
-#     result = cur.execute(query)
-#     items_3 = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-#     cur.close()
-
-#     items = dict(chain(items_1.items(),items_2.items(),items_3.items()))
-
-
-#     if items is None:
-#         return page_not_found(404)
-#     else:
-#         return Response(json.dumps(items, sort_keys=False), 200, {'Content-Type': 'application/json'})
 
 
 # Finally, spin up our little app!
