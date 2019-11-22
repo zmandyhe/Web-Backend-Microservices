@@ -1,8 +1,9 @@
 # This is the playlist microservice Python script.
 
 import flask;
-from flask import request, jsonify, g;
+from flask import request, jsonify, g, Response;
 import sqlite3;
+import json
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
@@ -142,213 +143,83 @@ def tracks_home():
     '''
 # End of tracks_home()
 
-# This function runs when the users attempts to add a playlist to the database.
-#   On success, return a 201 - Created
-#   On failure, return a 409 - Conflict
-@app.route("/api/v1/resources/playlists", methods=["POST"])
-def playlist_create():
-    # First, we need to make sure that the required fields are populated. The
-    # only one that doesn't need to be checked is the description.
-    error = None;
-    if not request.form['title']:
-        error = "Playlist Name Missing!";
-    elif not request.form['user']:
-        error = "Username Missing!"
 
-    # Next, we check that the this specific track doesn't already exist. However,
-    # just the track name won't be unique enough since it could be a cover or on
-    # two seperate albums. For this reason, we're going to check it see if the
-    # combination of track, artist, and album should be unique enough.
-    elif check_uniqueness(request.form['track_name'], request.form['album_name'],
-            request.form['artist']) is False:
-        error = "This track already exists in the database!";
-    else:
-        # Given that we haven't failed any of the above checks, we are ready to
-        # open a connection and insert the new record.
-        conn = get_db();
-        cur = conn.cursor();
-        cur.execute("INSERT INTO tracks(title, album, artist, len, track_url, art_url) \
-                VALUES(?,?,?,?,?,?);", (request.form['track_name'], request.form['album_name'],\
-                request.form['artist'], request.form['track_len'], request.form['track_URL'],\
-                request.form['art_URL']));
-        conn.commit();
-
-    if error:
-        ret_str = "<h1>Oops!</h1> <p>Looks like there was a problem inserting a new record \
-                into the database: " + error + "</p>";
-        return ret_str, 409;
-    else:
-        ret_str = "<h1>Success!</h1><p>This record was successfully added to the service!</p> \
-                Track: " + request.form['track_name'] + \
-                "Album: " +  request.form['album_name'] + \
-                "Artist: " + request.form['artist'] + \
-                "Length: " + request.form['track_len'] + \
-                "Track URL: " +  request.form['track_URL'] + \
-                "Art URL: " +  request.form['art_URL'];
-
-        return ret_str, 201
-# End of track_create()
-
-# This function runs when the users attempts to retrieve a track from the
-# database. The user can use any combination of the track name, album name,
-# or artist as a search query.
-#   On success, return a 200 - OK, with the data
-#   On failure, return a 404 - Not Found, with an error
-# NOTE: This code follows very closely to the code provided to us in the Science
-# Fiction Book example.
-@app.route("/api/v1/resources/tracks", methods=["GET"])
-def track_retrieve():
-    # Since we're going to be using the incoming variables a lot, let's get
-    # them into more managable variables.
-    query_params = request.args;
-    track = query_params.get('track_name');
-    album = query_params.get('album_name');
-    artist = query_params.get('artist');
-
-    # Now we can check to see which items the user submitted, and build our
-    # query string.
-    query = "SELECT * FROM tracks WHERE";
-    to_filter = [];
-
-    if track:
-        query += ' title=? AND';
-        to_filter.append(track);
-    if album:
-        query += ' album=? AND';
-        to_filter.append(album);
-    if artist:
-        query += ' artist=? AND';
-        to_filter.append(artist);
-    if not (track or album or artist):
-        return "<h1>You must fill in at least one search query term!</h1>", 404;
-
-    # Do some final trimming and append a semicolon onto our query
-    query = query[:-4] +';';
-
-    # Finally, query the database and return the results!
-    cur = get_db().execute(query, to_filter);
-    results = cur.fetchall();
-    cur.close();
-
-    if results:
-        return jsonify(results), 200;
-    else:
-        return "<h1>Failure</h1><p>It seems that there's nothing in the database \
-                that matches those search parameters.</p><p>Please try again!</p>", 404;
-# End of track_retrieve()
-
-# This function runs when the users attempts to edit a track from the
-# database. The user can search for a track and then edit it. This will use the
-# PUT HTTP verb. Since we're essientally going to get two pieces of information
-# from the user (i.e. a query to look up, and the data to replace it with) that
-# we're going to use the GET "way" of argument passing in the URL for the search
-# query, and the POST way of getting the body contents for the updated information.
-#   On success, return a 200 - OK, with the updated data
-#   On failure, return a 404 - Not Found, with an error
-# NOTE: This will only deal with finding a single track -- unlike the retrieval
-# function -- since editing multiple tracks is difficult without a solid front-end.
-@app.route("/api/v1/resources/tracks", methods=["PUT"])
-def track_edit():
-    # This will repeat the search functionality of the retrieve method, but
-    # slimmed down for editing.
-    track = request.args.get('track_name');
-
-    # Make sure the user typed in a track title to look up
-    if not track:
-        return "<h1>Failure</h1><p>You must specify a track name in the URL \
-        to look up!</p>", 404;
-
-    # And check to see if it's in the database
-    query = "SELECT * FROM tracks WHERE title=?;";
-    cur = get_db().execute(query, [track]);
-    result = cur.fetchall();
-    cur.close();
-
-    if not result:
-        return "<h1>Failure!</h1><p>The track that you've searched for is not \
-        in the database. Either correct your spelling, or try adding it to \
-        the database first!</p>", 404;
-
-    # Next, we parse the update information by checking to see if the user suppied
-    # the information. For each field they supplied information to, we'll collect
-    # them and pass them as a parameter list to an execute function.
-    query = "UPDATE tracks SET";
-    update_info = [];
-
-    # NOTE: Current issue with this method is finding out if a user populated any
-    # of these fields with information meanwhile needing the ones that aren't changed
-    # to still be there, just without information.
-    if request.form['track_name']:
-        query += ' title=?,';
-        update_info.append(request.form['track_name']);
-    if request.form['album_name']:
-        query += ' album=?,';
-        update_info.append(request.form['album_name']);
-    if request.form['artist']:
-        query += ' artist=?,';
-        update_info.append(request.form['artist']);
-    if request.form['track_len']:
-        query += '  len=?,';
-        update_info.append(request.form['track_len']);
-    if request.form['track_URL']:
-        query += ' track_url=?,';
-        update_info.append(request.form['track_URL']);
-    if request.form['art_URL']:
-        query += ' art_url=?,';
-        update_info.append(request.form['art_URL']);
-
-    # Remove the trailing comma, and finish the rest of the query string.
-    query = query[:-1] + " WHERE title=?;";
-    update_info.append(track);
-    # Execute the update
+#function to create a new playlist for a user from query parameter in the api endpoint
+@app.route('/api/v1/resource/playlists/newplaylist',methods=['POST'])
+def create_new_playlist():
     conn = get_db()
-    cur = conn.cursor();
-    cur.execute(query, update_info);
-    conn.commit();
-    cur.close();
+    cur = conn.cursor()
+    query_parameters = request.args
+    playlist_title = query_parameters.get("playlist_title")
+    track_url = query_parameters.get("track_url")
+    username = query_parameters.get("username")
+    description = query_parameters.get("description")
+    if playlist_title is not None and track_url is not None and username is not None:
+        try:
+            playlist = (playlist_title, username, track_url)
+            if description is not None:
+                playlist.append(description);
 
-    return "<h1>Success!</h1><p>You have updated the information of record: " \
-            + track + "!</p>", 200;
-# End of track_edit()
+            execute_string = "INSERT INTO playlists(playlist_title, username, track_url"
+            if description is not None:
+                execute_string += ", description) "
+            else:
+                execute_string += ") "
+            execute_string += "VALUES (?,?,?"
+            if description is not None:
+                execute_string += ",?);"
+            else:
+                execute_string += ");"
+            result = cur.execute(execute_string, playlist)
+            conn.commit()
+            cur.close()
+            #if items is None:
+            return "<h1>Success!</h1><p>Congrats!</p>", 201
+            #else:
+            #return Response(json.dumps(newuser_dict, sort_keys=False),headers={'Content-Type':'application/json'},status=201)
+        except Exception as err:
+            return ('Query Failed: %s\nError %s' % (''' INSERT INTO playlists''', str()))
+    else:
+        return ("input query parameters")
 
-# This function allows the user to delete tracks from the database. It's going
-# to work along the same lines as the edit function, but just a bit simpler since
-# it needs to only delete the record.
-#   On success, return a 200 - OK, with a positive message
-#   On failure, return a 404 - Not Found, with an error
-@app.route("/api/v1/resources/tracks", methods=["DELETE"])
-def track_delete():
-    # This will repeat the search functionality of the retrieve method, but
-    # slimmed down for deleting
-    track = request.args.get('track_name');
 
-    # Make sure the user typed in a track title to look up
-    if not track:
-        return "<h1>Failure</h1><p>You must specify a track name in the URL \
-        to look up!</p>", 404;
-
-    # And check to see if it's in the database
-    query = "SELECT * FROM tracks WHERE title=?;";
-    cur = get_db().execute(query, [track]);
-    result = cur.fetchall();
-    cur.close();
-
-    if not result:
-        return "<h1>Failure!</h1><p>The track that you've searched for is not \
-        in the database. Either correct your spelling, or try adding it to \
-        the database first!</p>", 404;
-
-    # So, now we know the record exists, and we can safely delete it.
-    query = "DELETE FROM tracks WHERE title=?;";
+#retrieve all playlist from a user
+@app.route('/api/v1/resource/playlists/profile', methods = ['GET'])
+def get_user_profile():
     conn = get_db()
-    cur = conn.cursor();
-    cur.execute(query, [track]);
-    conn.commit();
-    cur.close();
+    cur = conn.cursor()
+    query_parameters = request.args
+    playlist_title = query_parameters.get("playlist_title")
+    username = query_parameters.get("username")
+    query = "SELECT playlist_title, username, track_url, description FROM playlists WHERE playlist_title=? AND username=?"
+    result = cur.execute(query, (playlist_title,username))
+    items = cur.fetchall()
+    cur.close()
+    if items is None:
+        return page_not_found(404)
+    else:
+        return Response(json.dumps(items[0]),mimetype="application/json",status=200)
 
-    return "<h1>Success!</h1><p>You have deleted the record of track: " \
-            + track + "!</p>", 200;
-# End of track_delete()
+
+#delete a user's playlist
+#query parameters: e.g. username=HLMN, playlist_title=Trending
+@app.route('/api/v1/resource/playlists/removal', methods = ['DELETE'])
+def delete_user():
+    conn = get_db()
+    cur = conn.cursor()
+    username = request.args.get('username')
+    playlist_title = request.args.get('playlist_title')
+    if username is not None and playlist_title is not None:
+        try:
+            query = ''' DELETE FROM playlists WHERE playlist_title =? AND username = ?'''
+            cur.execute(query,(playlist_title,username))
+            conn.commit()
+            cur.close()
+            return Response( "200 OK,The user's playlist is deleted successfully", headers={'Content-Type':'application/json'},status=200)
+        except Exception as err:
+            return ('Query Failed: %s\nError: %s' % (''' DELETE FROM playlists''', str()))
+    return ("input playlist_title and username as query parameters")
+
 
 # This will be a special function that is a generic File Not Found error
 # handler that will just spit out a message that let's the user know they've
@@ -361,4 +232,5 @@ def page_not_found(e):
 # End of page_not_found
 
 # Finally, spin up our little app!
-app.run(debug=True, port=8080);
+# app.run(debug=True, port=8080);
+app.run()

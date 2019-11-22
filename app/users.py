@@ -160,5 +160,6 @@ def delete_user():
     return ("input username as a query parameter")
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+app.run()
+# if __name__ == "__main__":
+#     app.run(debug=True)

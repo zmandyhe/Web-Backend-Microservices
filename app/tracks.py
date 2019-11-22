@@ -409,4 +409,5 @@ def page_not_found(e):
 
 
 # Finally, spin up our little app!
-app.run(debug=True, port=3456);
+# app.run(debug=True, port=3456);
+app.run()
