@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    {% for val in values %}
+    <person>
+        <name>{{val.name}}</name>
+        <surname>{{val.surname}}</surname>
+        <age>{{val.age}}</age>
+    </person>
+    {% endfor %}
+</urlset>

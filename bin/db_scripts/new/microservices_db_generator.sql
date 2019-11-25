@@ -6,14 +6,15 @@ PRAGMA foreign_keys=ON;
 BEGIN TRANSACTION;
     DROP TABLE IF EXISTS playlists;
     CREATE TABLE playlists (
-        playlist_title VARCHAR NOT NULL PRIMARY KEY,
+        playlist_title VARCHAR NOT NULL,
         track_url VARCHAR,
+        guid GUID NOT NULL,
         username VARCHAR,
         description VARCHAR,
-	    FOREIGN KEY(track_url)
-        REFERENCES tracks (track_url) 
-	        ON UPDATE CASCADE 
-	        ON DELETE CASCADE
+	FOREIGN KEY(guid)
+        REFERENCES tracks (guid) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE
     );
 
     DROP TABLE IF EXISTS users;
@@ -29,10 +30,10 @@ BEGIN TRANSACTION;
     CREATE TABLE desc (
         username VARCHAR,
         trackdesc VARCHAR,
-	    track_url VARCHAR,
-	    FOREIGN KEY(track_url) 
-	    REFERENCES tracks (track_url) 
-	        ON UPDATE CASCADE 
-	        ON DELETE CASCADE
+	track_url VARCHAR,
+	FOREIGN KEY(track_url) 
+	REFERENCES tracks (track_url) 
+	    ON UPDATE CASCADE 
+	    ON DELETE CASCADE
     );
     COMMIT;
