@@ -1,7 +1,7 @@
 # This is the tracks microservice Python script.
 
 import flask;
-from flask import request, jsonify, g;
+from flask import request, jsonify, g, Response;
 import sqlite3;
 import uuid
 from itertools import chain
@@ -182,7 +182,7 @@ def track_create():
     # one field that is optional which is the URL for the Album Art.
     # data, which_db = get_uuid_and_which_db()
     guid = get_uuid()
-    print(guid)
+    # print(guid)
     which_db = get_which_db(guid)
     error = None;
     if not request.form['track_name']:
@@ -210,6 +210,9 @@ def track_create():
             request.form['artist'], request.form['track_len'], request.form['track_URL'],\
             request.form['art_URL']));
     conn.commit();
+    #make some convenient call to get all tracks' guid on this database
+    # cur.execute("SELECT * FROM tracks")
+    # items = cur.fetchall()
     # print(guid)
     # conn.text_factory = str
     # cur = conn.cursor()
@@ -218,17 +221,20 @@ def track_create():
     # print(tracklist)
     cur.close()
 
+    guid_string = str(guid)
+
     if error:
         ret_str = "<h1>Oops!</h1> <p>Looks like there was a problem inserting a new record \
                 into the database: " + error + "</p>";
         return ret_str, 409;
     else:
         ret_str = "<h1>Success!</h1><p>This record was successfully added to the service!</p> \
-        		Track: " + request.form['track_name'] + \
-                "Album: " +  request.form['album_name'] + \
-                "Artist: " + request.form['artist'] + \
-                "Length: " + request.form['track_len'] + \
-                "Track URL: " +  request.form['track_URL'] + \
+        		Track: " + request.form['track_name'] + ", " \
+                "guid: " + guid_string + ", " \
+                "Album: " +  request.form['album_name'] + ", " \
+                "Artist: " + request.form['artist'] + ", "  \
+                "Length: " + request.form['track_len'] + ", " \
+                "Track URL: " +  request.form['track_URL'] + ", " \
                 "Art URL: " +  request.form['art_URL'];
 
         return ret_str, 201
@@ -275,6 +281,7 @@ def track_retrieve():
         return "<h1>Failure</h1><p>It seems that there's nothing in the database \
                 that matches those search parameters.</p><p>Please try again!</p>", 404;
 # End of track_retrieve()
+
 
 # This function runs when the users attempts to edit a track from the
 # database. The user can search for a track and then edit it. This will use the
@@ -396,6 +403,7 @@ def track_delete():
 
     return "<h1>Success!</h1><p>You have deleted the record of track </p>", 200;
 # End of track_delete()
+
 
 # This will be a special function that is a generic File Not Found error
 # handler that will just spit out a message that let's the user know they've

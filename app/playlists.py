@@ -3,10 +3,13 @@
 import flask;
 from flask import request, jsonify, g, Response;
 import sqlite3;
-import json
+import json, uuid
+from itertools import chain
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
+sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
+sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
 #app.config.from_envvar('APP_CONFIG');
 
 # This is a helper function to convert the database rows returned into dictionaries.
@@ -152,20 +155,22 @@ def create_new_playlist():
     query_parameters = request.args
     playlist_title = query_parameters.get("playlist_title")
     track_url = query_parameters.get("track_url")
+    guid_string =  query_parameters.get("guid_string")
+    guid = uuid.UUID(guid_string)
     username = query_parameters.get("username")
     description = query_parameters.get("description")
-    if playlist_title is not None and track_url is not None and username is not None:
+    if playlist_title is not None and guid_string is not None and track_url is not None and username is not None:
         try:
-            playlist = (playlist_title, username, track_url)
+            playlist = (playlist_title,track_url,guid, username)
             if description is not None:
                 playlist.append(description);
 
-            execute_string = "INSERT INTO playlists(playlist_title, username, track_url"
+            execute_string = "INSERT INTO playlists(playlist_title,track_url,guid,username"
             if description is not None:
                 execute_string += ", description) "
             else:
                 execute_string += ") "
-            execute_string += "VALUES (?,?,?"
+            execute_string += "VALUES (?,?,?,?"
             if description is not None:
                 execute_string += ",?);"
             else:
@@ -191,14 +196,18 @@ def get_user_profile():
     query_parameters = request.args
     playlist_title = query_parameters.get("playlist_title")
     username = query_parameters.get("username")
-    query = "SELECT playlist_title, username, track_url, description FROM playlists WHERE playlist_title=? AND username=?"
+    query = "SELECT playlist_title, track_url, guid, username, description FROM playlists WHERE playlist_title=? AND username=?"
     result = cur.execute(query, (playlist_title,username))
     items = cur.fetchall()
+
+    # guid = [item.get("guid") for item in items]
+    # print(type(guid))
     cur.close()
     if items is None:
         return page_not_found(404)
     else:
-        return Response(json.dumps(items[0]),mimetype="application/json",status=200)
+        return Response(json.dumps(items),mimetype="application/json",status=200)
+        # return items
 
 
 #delete a user's playlist
