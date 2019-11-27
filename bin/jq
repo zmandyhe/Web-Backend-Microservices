@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+Date: Wed, 27 Nov 2019 08:47:10 GMT
+Content-Type: application/json; charset=utf-8
+Connection: keep-alive
+Access-Control-Allow-Origin: *
+Server: kong/1.4.0
+Content-Length: 1273
+X-Kong-Admin-Latency: 1
+
+{"database":{"reachable":true},"memory":{"workers_lua_vms":[{"http_allocated_gc":"0.04 MiB","pid":27032},{"http_allocated_gc":"0.02 MiB","pid":27033},{"http_allocated_gc":"0.02 MiB","pid":27034},{"http_allocated_gc":"0.02 MiB","pid":27035},{"http_allocated_gc":"0.02 MiB","pid":27036},{"http_allocated_gc":"0.02 MiB","pid":27037},{"http_allocated_gc":"0.02 MiB","pid":27038},{"http_allocated_gc":"0.02 MiB","pid":27039}],"lua_shared_dicts":{"kong_locks":{"allocated_slabs":"0.06 MiB","capacity":"8.00 MiB"},"kong":{"allocated_slabs":"0.04 MiB","capacity":"5.00 MiB"},"kong_process_events":{"allocated_slabs":"0.04 MiB","capacity":"5.00 MiB"},"kong_db_cache":{"allocated_slabs":"0.77 MiB","capacity":"128.00 MiB"},"kong_cluster_events":{"allocated_slabs":"0.04 MiB","capacity":"5.00 MiB"},"kong_db_cache_miss":{"allocated_slabs":"0.08 MiB","capacity":"12.00 MiB"},"prometheus_metrics":{"allocated_slabs":"0.04 MiB","capacity":"5.00 MiB"},"kong_healthchecks":{"allocated_slabs":"0.04 MiB","capacity":"5.00 MiB"},"kong_rate_limiting_counters":{"allocated_slabs":"0.08 MiB","capacity":"12.00 MiB"}}},"server":{"connections_writing":1,"total_requests":17,"connections_handled":16,"connections_accepted":16,"connections_reading":0,"connections_active":1,"connections_waiting":0}}
