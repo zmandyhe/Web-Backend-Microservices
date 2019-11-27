@@ -1,29 +1,29 @@
 # Set up the Upstream for the tracks microservice
 curl -X POST http://localhost:8001/upstreams/ \
---data "name=tracks"
+--data "name=tracks";
 
 # Now, add Targets to the Upstream. These will be the each of the instances of a single microservice, in this case tracks
 curl -X POST http://localhost:8001/upstreams/tracks/targets \
---data "target=localhost:5000 \
---data "weight=100"
+--data "target=localhost:5000" \
+--data "weight=100";
 
 curl -X POST http://localhost:8001/upstreams/tracks/targets \
---data "target=localhost:5001 \
---data "weight=100"
+--data "target=localhost:5001" \
+--data "weight=100";
 
 curl -X POST http://localhost:8001/upstreams/tracks/targets \
---data "target=localhost:5002 \
---data "weight=100"
+--data "target=localhost:5002" \
+--data "weight=100";
 
 # Next, create a Service targeting the Upstream
 curl -X POST http://localhost:8001/services/ \
 --data "name=tracks_service" \
 --data "host=tracks" \
---data "path=/"
+--data "path=/";
 
 # Finally, we'll add a Route as an entry-point into the Service
 curl -X POST http://localhost:8001/services/tracks_service/routes/ \
---data "hosts[]=tracks"
+--data "paths[]=/tracks";
 
 
 

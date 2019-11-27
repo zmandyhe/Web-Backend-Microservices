@@ -1,1 +1,1 @@
-ulimit -n 4096 && sudo kong start -c ../etc/kong.conf
+ulimit -n 4096 && sudo kong start -c ../../etc/kong.conf
