@@ -420,5 +420,5 @@ def page_not_found(e):
 
 
 # Finally, spin up our little app!
-# app.run(debug=True, port=3456);
-app.run()
+if __name__ == "__main__":
+    app.run(debug=True);

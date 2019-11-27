@@ -5,24 +5,24 @@
 #### The information in this file will reflect different assumptions, instructions, and other meta-data of our project.
 
 ##### Design Decisions:
-   - We will be using vanilla Flask for the web framework.
-   - We will be using sqlite3 for our database.
-   - We will be using a Linux-like directory structure for our project. (See Project Structure for more information)
+    * We will be using vanilla Flask for the web framework.
+    * We will be using sqlite3 for our database.
+    * We will be using a Linux-like directory structure for our project. (See Project Structure for more information)
 
 ##### Project Structure:
-   - etc/ will contain all of the configuration files.
-   - bin/ will contain all of the scripts to aid in the project.
-   - app/ will contain all of the python code to our microservices.
-   - lib/ will contain various libraries (or libary-type files).
-   - var/ will contain various changing files; most importatly, the database files.
-   - media/ will contain the individual music files and the album art.
+    * etc/ will contain all of the configuration files.
+    * bin/ will contain all of the scripts to aid in the project.
+    * app/ will contain all of the python code to our microservices.
+    * lib/ will contain various libraries (or libary-type files).
+    * var/ will contain various changing files; most importatly, the database files.
+    * media/ will contain the individual music files and the album art.
 
-##### Database Structure
+##### Database Structure:
 Starting with Project 2, we were to implement sharding of the "tracks" database. Three in total. And then there will be one database for the other data, namely the users, playlist, and description tables. The databases, stored in the var/, are named:
-    - tracks\_shard0.db
-    - tracks\_shard1.db
-    - tracks\_shard2.db
-    - microservices\_db.db
+    * tracks\_shard0.db
+    * tracks\_shard1.db
+    * tracks\_shard2.db
+    * microservices\_db.db
 
 #### Environment
     - Flask (both the python library and the commandline utility)
@@ -33,6 +33,7 @@ Starting with Project 2, we were to implement sharding of the "tracks" database.
 ##### TO Run the services, following this process
 There are a few scripts and configuration files to help get a new environment ready to go for our microservices. Most of them are locked up in bin/ and etc/, respectively. Here are the steps to set-up the
 flask environment and the database with the schema needed to move forward:
+<<<<<<< HEAD
 
     1. To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
     you can just run and it'll get a fresh database file for you to work with.
@@ -54,6 +55,13 @@ flask environment and the database with the schema needed to move forward:
 
 #### xspf Microservice:
 
+=======
+    * Make sure that you have Flask (both the python library and the commandline utility), foreman, dot-env, and sqlite3 downloaded and installed.
+    * To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
+    you can just run and it'll get a fresh database file for you to work with.
+    * After that, migrate to the bin/ directory, run the Procfile through foreman.
+    * Finally, you are ready to enjoy.
+>>>>>>> b0edf16c59e93d55c60728eccf2aa72df66f65b0
 
 ##### Tracks Microservice:
 To learn more about the Tracks API and how to use it, please refer to the root page of the microservice after starting it up. It will have the most up-to-date information on all the new features and a general

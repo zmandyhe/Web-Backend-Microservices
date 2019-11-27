@@ -1,0 +1,30 @@
+# Set up the Upstream for the playlists microservice
+curl -X POST http://localhost:8001/upstreams/ \
+--data "name=playlists";
+
+# Now, add Targets to the Upstream. These will be the each of the instances of a single microservice, in this case playlists
+curl -X POST http://localhost:8001/upstreams/playlists/targets \
+--data "target=localhost:5100" \
+--data "weight=100";
+
+curl -X POST http://localhost:8001/upstreams/playlists/targets \
+--data "target=localhost:5101" \
+--data "weight=100";
+
+curl -X POST http://localhost:8001/upstreams/playlists/targets \
+--data "target=localhost:5102" \
+--data "weight=100";
+
+# Next, create a Service targeting the Upstream
+curl -X POST http://localhost:8001/services/ \
+--data "name=playlists_service" \
+--data "host=playlists" \
+--data "path=/";
+
+# Finally, we'll add a Route as an entry-point into the Service
+curl -X POST http://localhost:8001/services/playlists_service/routes/ \
+--data "paths[]=/playlists";
+
+
+
+

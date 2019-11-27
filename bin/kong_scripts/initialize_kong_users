@@ -1,0 +1,30 @@
+# Set up the Upstream for the users microservice
+curl -X POST http://localhost:8001/upstreams/ \
+--data "name=users";
+
+# Now, add Targets to the Upstream. These will be the each of the instances of a single microservice, in this case users
+curl -X POST http://localhost:8001/upstreams/users/targets \
+--data "target=localhost:5200" \
+--data "weight=100";
+
+curl -X POST http://localhost:8001/upstreams/users/targets \
+--data "target=localhost:5201" \
+--data "weight=100";
+
+curl -X POST http://localhost:8001/upstreams/users/targets \
+--data "target=localhost:5202" \
+--data "weight=100";
+
+# Next, create a Service targeting the Upstream
+curl -X POST http://localhost:8001/services/ \
+--data "name=users_service" \
+--data "host=users" \
+--data "path=/";
+
+# Finally, we'll add a Route as an entry-point into the Service
+curl -X POST http://localhost:8001/services/users_service/routes/ \
+--data "paths[]=/users";
+
+
+
+
