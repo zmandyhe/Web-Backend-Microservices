@@ -11,7 +11,8 @@ BEGIN TRANSACTION;
         album VARCHAR NOT NULL,
         artist VARCHAR NOT NULL,
         len VARCHAR NOT NULL, 
-        track_url VARCHAR NOT NULL,
+        track_url VARCHAR,
+	media_url VARCHAR NOT NULL,
         art_url VARCHAR
     );
     COMMIT;

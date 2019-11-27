@@ -24,14 +24,36 @@ Starting with Project 2, we were to implement sharding of the "tracks" database.
     - tracks\_shard2.db
     - microservices\_db.db
 
-##### Tips on Making the Environment Useable Out-Of-The-Box
+#### Environment
+    - Flask (both the python library and the commandline utility)
+    - foreman, dot-env, and sqlite3 downloaded and installed.
+    - Jinja2 
+    - requests
+
+##### TO Run the services, following this process
 There are a few scripts and configuration files to help get a new environment ready to go for our microservices. Most of them are locked up in bin/ and etc/, respectively. Here are the steps to set-up the
 flask environment and the database with the schema needed to move forward:
-    - Make sure that you have Flask (both the python library and the commandline utility), foreman, dot-env, and sqlite3 downloaded and installed.
-    - To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
+
+    1. To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
     you can just run and it'll get a fresh database file for you to work with.
-    - After that, migrate to the bin/ directory, run the Procfile through foreman.
-    - Finally, you are ready to enjoy.
+    2. To run the 4 microservices, migrate to the bin/ directory, run the Procfile through foreman of "foreman start", the 4 microservices will run on separate ports:
+	10:08:56 desc.1      |  * Running on http://127.0.0.1:5300/ (Press CTRL+C to quit)
+	10:08:56 playlists.1 |  * Running on http://127.0.0.1:5100/ (Press CTRL+C to quit)
+	10:08:56 users.1     |  * Running on http://127.0.0.1:5200/ (Press CTRL+C to quit)
+	10:08:56 tracks.1    |  * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+
+    3. To start MINIO: go to /Minio folder with executable file and sub-folders, then to go terminal, and
+	run minio:
+	"./minio server start object storage server"
+      Minio server will run at http://127.0.0.1:9000, and mp3 files are stored in th folder of /tracks
+      Use the following credentials to access the minio server bucket:
+         -AccessKey: 54AUW87M5DUD0B9UBR1X 
+         -SecretKey: s28mRRzRRhJcJv84MxzEyNaVt2nTwejSkWuGoBr8 
+    4. to generate a xspf playlist, the script is located in /app/xspf.py. Go to /app folder, from terminal, run "python xspf.py", it will run in local host.
+       run this endpoint: http://127.0.0.1:8080/playlist/1. The sample playlist xml file is xspf-playlist.xml.
+
+#### xspf Microservice:
+
 
 ##### Tracks Microservice:
 To learn more about the Tracks API and how to use it, please refer to the root page of the microservice after starting it up. It will have the most up-to-date information on all the new features and a general

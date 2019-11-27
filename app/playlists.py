@@ -153,33 +153,21 @@ def create_new_playlist():
     conn = get_db()
     cur = conn.cursor()
     query_parameters = request.args
+    playlist_id_string= query_parameters.get("playlist_id")
+    playlist_id = int(playlist_id_string)
     playlist_title = query_parameters.get("playlist_title")
     track_url = query_parameters.get("track_url")
-    guid_string =  query_parameters.get("guid_string")
-    guid = uuid.UUID(guid_string)
     username = query_parameters.get("username")
     description = query_parameters.get("description")
-    if playlist_title is not None and guid_string is not None and track_url is not None and username is not None:
+    if playlist_id_string is not None and playlist_title is not None and track_url is not None and username is not None:
         try:
-            playlist = (playlist_title,track_url,guid, username)
-            if description is not None:
-                playlist.append(description);
-
-            execute_string = "INSERT INTO playlists(playlist_title,track_url,guid,username"
-            if description is not None:
-                execute_string += ", description) "
-            else:
-                execute_string += ") "
-            execute_string += "VALUES (?,?,?,?"
-            if description is not None:
-                execute_string += ",?);"
-            else:
-                execute_string += ");"
+            playlist = (playlist_id, playlist_title,track_url,username,description)
+            execute_string = "INSERT INTO playlists (playlist_id,playlist_title,track_url,username,description) VALUES (?,?,?,?,?);"
             result = cur.execute(execute_string, playlist)
             conn.commit()
             cur.close()
             #if items is None:
-            return "<h1>Success!</h1><p>Congrats!</p>", 201
+            return "<h1>Success!</h1><p>Congrat</p>", 201
             #else:
             #return Response(json.dumps(newuser_dict, sort_keys=False),headers={'Content-Type':'application/json'},status=201)
         except Exception as err:
@@ -188,7 +176,7 @@ def create_new_playlist():
         return ("input query parameters")
 
 
-#retrieve all playlist from a user
+#retrieve all playlist from a user by playlist title and username
 @app.route('/api/v1/resource/playlists/profile', methods = ['GET'])
 def get_user_profile():
     conn = get_db()
@@ -196,7 +184,7 @@ def get_user_profile():
     query_parameters = request.args
     playlist_title = query_parameters.get("playlist_title")
     username = query_parameters.get("username")
-    query = "SELECT playlist_title, track_url, guid, username, description FROM playlists WHERE playlist_title=? AND username=?"
+    query = "SELECT playlist_id, playlist_title, track_url, username, description FROM playlists WHERE playlist_title=? AND username=?"
     result = cur.execute(query, (playlist_title,username))
     items = cur.fetchall()
 
@@ -208,7 +196,7 @@ def get_user_profile():
     else:
         return Response(json.dumps(items),mimetype="application/json",status=200)
         # return items
-
+  
 
 #delete a user's playlist
 #query parameters: e.g. username=HLMN, playlist_title=Trending

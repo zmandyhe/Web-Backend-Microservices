@@ -195,6 +195,8 @@ def track_create():
         error = "Track Length Missing!"
     elif not request.form["track_URL"]:
         error = "Track's URL Missing!"
+    elif not request.form["media_URL"]:
+        error = "art's URL Missing!"
     elif not request.form["art_URL"]:
         error = "art's URL Missing!"
 
@@ -205,10 +207,10 @@ def track_create():
     #conn = get_db_uuid(which_db)
     conn = get_db_by_uuid(which_db)
     cur = conn.cursor();
-    cur.execute("INSERT INTO tracks(guid, title, album, artist, len, track_url, art_url) \
-            VALUES(?,?,?,?,?,?,?);", (guid, request.form['track_name'], request.form['album_name'],\
+    cur.execute("INSERT INTO tracks(guid, title, album, artist, len, track_url, media_url, art_url) \
+            VALUES(?,?,?,?,?,?,?,?);", (guid, request.form['track_name'], request.form['album_name'],\
             request.form['artist'], request.form['track_len'], request.form['track_URL'],\
-            request.form['art_URL']));
+            request.form['media_URL'],request.form['art_URL']));
     conn.commit();
     #make some convenient call to get all tracks' guid on this database
     # cur.execute("SELECT * FROM tracks")
@@ -235,6 +237,7 @@ def track_create():
                 "Artist: " + request.form['artist'] + ", "  \
                 "Length: " + request.form['track_len'] + ", " \
                 "Track URL: " +  request.form['track_URL'] + ", " \
+                "Media URL: " +  request.form['media_URL'] + ", " \
                 "Art URL: " +  request.form['art_URL'];
 
         return ret_str, 201
