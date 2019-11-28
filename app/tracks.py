@@ -257,7 +257,6 @@ def track_retrieve():
     query_params = request.args;
     guid_string = query_params.get('guid_string')
     guid = uuid.UUID(guid_string)
-    print(type(guid))
     # track = query_params.get('track_name');
     # album = query_params.get('album_name');
     # artist = query_params.get('artist');

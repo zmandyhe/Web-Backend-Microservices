@@ -50,26 +50,27 @@ def home():
     return'''<h1> Welcome to Description Microservice </h1>'''
 
 
-'''endpoint to retrieve a user's description of a track'''
+#endpoint to retrieve a user description of a track description'
 @app.route('/api/v1/resources/desc/profile', methods = ['GET'])
 def get_user_profile():
     conn = get_db()
     cur = conn.cursor()
     query_parameters = request.args
-    username = query_parameters.get("username")
+    # username = query_parameters.get("username")
     track_url= query_parameters.get("track_url")
-    if username is not None and track_url is not None:
-        query = "SELECT username,track_url,trackdesc FROM desc WHERE username=username AND track_url=track_url"
+    if track_url is not None:
+        # query = "SELECT username,track_url,trackdesc FROM desc WHERE username=username AND track_url=track_url"
+        query = "SELECT trackdesc FROM desc WHERE track_url=track_url"
         result = cur.execute(query)
         #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-        items = cur.fetchall()
+        items = cur.fetchone()
         cur.close()
         if items is None:
             return page_not_found(404)
         else:
             return Response(json.dumps(items, sort_keys=False),headers={'Content-Type':'application/json'},status=200)
     else:
-        return ("input query parameter with ?username=your-query-username & tracktitle=your-query-tracktitle")
+        return ("input query parameter with track_url= track_url")
 
 
 #function to set a track's description by a user
