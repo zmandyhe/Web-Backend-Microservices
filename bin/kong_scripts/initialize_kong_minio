@@ -1,21 +1,12 @@
-# Set up the Upstream for the MinIO Object Server
-curl -X POST http://localhost:8001/upstreams/ \
---data "name=minio";
-
-# Now, add Targets to the Upstream. These will be just the one MinIO server we have running
-curl -X POST http://localhost:8001/upstreams/minio/targets \
---data "target=localhost:9000" \
---data "weight=100";
-
-# Next, create a Service targeting the Upstream
+# First, we create a Service targeting MinIO endpoint
 curl -X POST http://localhost:8001/services/ \
 --data "name=minio_service" \
---data "host=minio" \
---data "path=/";
+--data "host=media" \
+--data "url=http://localhost:9000";
 
-# Finally, we'll add a Route as an entry-point into the Service
+# Then, we'll add a Route as an entry-point into the MinIO Service
 curl -X POST http://localhost:8001/services/minio_service/routes/ \
---data "paths[]=/minio";
+--data "paths[]=/media";
 
 
 
