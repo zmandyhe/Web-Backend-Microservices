@@ -33,7 +33,6 @@ Starting with Project 2, we were to implement sharding of the "tracks" database.
 ##### TO Run the services, following this process
 There are a few scripts and configuration files to help get a new environment ready to go for our microservices. Most of them are locked up in bin/ and etc/, respectively. Here are the steps to set-up the
 flask environment and the database with the schema needed to move forward:
-<<<<<<< HEAD
 
     1. To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
     you can just run and it'll get a fresh database file for you to work with.
@@ -51,17 +50,19 @@ flask environment and the database with the schema needed to move forward:
          -AccessKey: 54AUW87M5DUD0B9UBR1X 
          -SecretKey: s28mRRzRRhJcJv84MxzEyNaVt2nTwejSkWuGoBr8 
     4. to generate a xspf playlist, the script is located in /app/xspf.py. Go to /app folder, from terminal, run "python xspf.py", it will run in local host.
-       run this endpoint: http://127.0.0.1:8080/playlist/1. The sample playlist xml file is xspf-playlist.xml.
+       run this endpoint: http://127.0.0.1:8000/playlist/1. The sample playlist xml file is xspf-playlist.xml.
 
 #### xspf Microservice:
+    *to run it, go to /app
+    *in terminal, run: python xspf.py
+    *http://127.0.0.1:8000/playlist/1 to generate a xspf playlist.
 
-=======
+#### Environment
     * Make sure that you have Flask (both the python library and the commandline utility), foreman, dot-env, and sqlite3 downloaded and installed.
     * To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
     you can just run and it'll get a fresh database file for you to work with.
     * After that, migrate to the bin/ directory, run the Procfile through foreman.
     * Finally, you are ready to enjoy.
->>>>>>> b0edf16c59e93d55c60728eccf2aa72df66f65b0
 
 ##### Tracks Microservice:
 To learn more about the Tracks API and how to use it, please refer to the root page of the microservice after starting it up. It will have the most up-to-date information on all the new features and a general
@@ -72,7 +73,7 @@ To learn more about the Playlist API and how to use it, please refer to the root
 guide on how to use it.
 
 ##### Users Microservice:
-users.py: python scripts to crate dataable, table, create new user, update user password, delete user, view user profile
+users.py: python scripts to crate datatable, table, create new user, update user password, delete user, view user profile
 
 ##### Description Microservices
 desc.py: python script to set and retrieve a user's description of a track.

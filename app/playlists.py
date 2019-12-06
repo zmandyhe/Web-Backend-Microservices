@@ -73,75 +73,61 @@ def tracks_home():
     data.</p>
 
     <p>Example Call: <br/>
-        /api/v1/resource/tracks <br/>
+        /api/v1/resource/playlists/newplaylist <br/>
         { <br/>
-            "title":"Night City", <br/>
-            "URLs_list":"", <br/>
-            "user":"rkretschmar", <br/>
+            "playlist_id": 1 , <br/>
+            "playlist_title":"Night City", <br/>
+            "track_url":""http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c198"", <br/>
+            "username":"rkretschmar", <br/>
             "description":"A curated playlist of cyberpunk music for that
             high-tech, low-life mood.", <br/>
         }
     </p>
 
     <h2>Retrieve</h2>
-    URL: <i>/api/v1/resources/tracks</i>, METHOD: GET <br/>
-    <p>This function allows you to retrieve tracks from the tracks table. The user
-    will perform a GET request on the tracks endpoint, and it will take the search
-    parameters of track name, album name, and/or artist. It returns a 200 and the data
+    URL: <i>/api/v1/resource/playlists/profile</i>, METHOD: GET <br/>
+    <p>This function allows you to retrieve a user's playlists. The user
+    will perform a GET request on the playlists endpoint, and it will take the search
+    parameters of playlist_title, username. It returns a 200 and the data
     if the data is in the table, and a 404 with an error message if not.
 
     <p>Example Call: <br/>
-        /api/v1/resource/tracks?track_name=My+Slumbering+Heart&artist=Rilo+Kiley <br/>
+        /api/v1/resource/playlists/profile?playlist_title=Inspiring Songs&username=mandy <br/>
     <b>Which returns:</b> <br/>
-        { <br/>
-            "track_name":"My Slumbering Heart", <br/>
-            "album_name":"The Execution of All Things", <br/>
-            "artist":"Rilo Kiley", <br/>
-            "track_len":"5:36", <br/>
-            "track_URL":"file://...", <br/>
-            "art_URL":"file://..." <br/>
-        }
+[
+    {
+        "username": "mandy",
+        "playlist_id": 1,
+        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c1981",
+        "description": "A list Inspirational songs that will help you to stay positive.",
+        "playlist_title": "Inspiring Songs"
+    },
+    {
+        "username": "mandy",
+        "playlist_id": 1,
+        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/991e0424-b4b5-4b26-b3f9-5076487e5e28",
+        "description": "A list Inspirational songs that will help you to stay positive.",
+        "playlist_title": "Inspiring Songs"
+    },
+    {
+        "username": "mandy",
+        "playlist_id": 1,
+        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/2239e100-1564-47f9-a189-29e1630db91a",
+        "description": "A list Inspirational songs that will help you to stay positive.",
+        "playlist_title": "Inspiring Songs"
+    }
+]<br/>
     </p>
 
-    <h2>Edit</h2>
-    URL: <i>/api/v1/resources/tracks</i>, METHOD: PUT <br/>
-    <p> This function allows the user to edit tracks that already exist in the database. It
-    has a unique way of deliving the information to the function. Half of it is in the URL
-    in a GET request type way, and the other half sits in the body like a POST request. The
-    URL parameter is the name of the track you want to change, and the body data contains the
-    new information. Because of a fluke in the way sqlite statements are handled in Python,
-    if the user wants something to remain UNCHANGED, then they will still have to have that
-    body variable present, just empty.
-    This function returns a 200 OK on success, and a 404 Not Found if the record didn't
-    exist in the table to begin with.
-    </p>
-
-    <p>Example Call: <br/>
-        /api/v1/resource/tracks?track_name=Runner <br/>
-    <br/>
-        { <br/>
-            "track_name":"", <br/>
-            "album_name":"The Execution of All Things (Remastered)", <br/>
-            "artist":"", <br/>
-            "track_len":"4:30", <br/>
-            "track_URL":"file://...", <br/>
-            "art_URL":"" <br/>
-        } <br/>
-    <i>NOTE: This reads: the track whose data we want to change is "Runner" (URL), and
-    the data that we WANT changed are the album_name, track_len, and the track_URL. The
-    rest remains unchanged (blank).</i>
-    </p>
 
     <h2>Delete</h2>
-    URL: <i>/api/v1/resources/tracks</i>, METHOD: DELETE <br/>
-    <p>This function allows a user to delete a record out of the tracks table. This will
-    use a straight-forward GET (URL) style parameter passing. It takes one parameter which
-    is the track to remove.
+    URL: <i>/api/v1/resource/playlists/removal</i>, METHOD: DELETE <br/>
+    <p>This function allows a user to delete a playlist by playlist_title and username parameters. 
     This function returns a 200 OK on success, and a 404 Not Found if the record didn't
     exist in the table to begin with.</p>
 
     <p>Example Call: <br/>
-        /api/v1/resource/tracks?track_name=My+Slumbering+Heart<br/>
+        /api/v1/resource/playlists/removal?playlist_title=Inspiring Songs&username=mandy<br/>
     </p>
     '''
 # End of tracks_home()

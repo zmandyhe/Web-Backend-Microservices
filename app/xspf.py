@@ -84,7 +84,16 @@ def get_track_description(track_url):
 	res2= json.loads(response)
 	return res2
 
+#home
+@app.route('/')
+def home():
+	return '''<h1>Welcome to the xspf Microservice!</h1>
+    <p>It will generate xspf xml file for a playlist.</p>
 
+    <h2>to run it</h2>
+    from terminal: python xspf.py, 
+    <h2> visit: http://localhost:8000/playlist/1 <br/>
+    <p>This will bring you a generator to generate a xspf playlist</p>'''
 
 #this is main app to start in order to generate a playlist xspf xml file
 @app.route('/playlist/<playlist_id>')
@@ -116,4 +125,4 @@ def get_playlist_xml(playlist_id):
 	return response
 
 if __name__ == "__main__":
-	app.run(debug=True, port=8080)
+	app.run(port=8000)

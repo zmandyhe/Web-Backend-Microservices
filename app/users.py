@@ -28,12 +28,62 @@ def convert_to_json():
 @app.route('/', methods=['GET'])
 def home():
     return '''<h1>Welcome to User Microservice API</h1>
-<p>/api/v1/resource/users/all, method: GET: list all users in the database.</p>
-<p>/api/v1/resource/users/newuser, method: POST: to create a new user from query parameters, sampple input like this: http://127.0.0.1:7890/users/createbyinput?username=mary&password=jfk&displayname=MaryKing&email=mary@163.com&url=https://kdkdk.com</p>
-<p>/api/v1/resource/users/newuserbyjson, method: POST: to create a new user from a json file, sammple data such as using users/newuser.txt.</p>
-<p>/api/v1/resource/users/password, method: PUT: to change a user's password, input old password then hashed, if it matches with the stored hash password, it will ask new password then strored the hashed password. Input query parameer like: /users/edit?username=mandy&old_password=fdgd&new_password=fdgd</p>
-<p>/api/v1/resource/users/profile, method: GET: to retrieve a user's profile except hashed password.</p>
-<p>/api/v1/resource/users/removal, method: DELETE: to delete a specific user, input query parameter: /users/delete?username=mandy.</p>'''
+
+<h2>Retrieve all users</h2>
+<p>/api/v1/resource/users/all, method: GET: list all users in the database.<br/>
+sample call: <br/>
+/api/v1/resource/users/all <br/>
+    [<br/>
+        {<br/>
+            "username": "jeff", <br/>
+            "displayname": "Jeff Bezos", <br/>
+            "url": "https://www.google.com/Jeffbezos", <br/>
+            "pwd_hash": "pbkdf2:sha256:150000$BN1bCsqI$26b5192c6a29ce9b8b6a70253eebfef7745013484a802c0e88c976cc628cc885",<br/>
+            "email": "jbezos@amazon.com" <br/>
+        }, <br/>
+        {<br/>
+            "username": "mandy", <br/>
+            "displayname": "Mandy He", <br/>
+            "url": "https://www.google.com/mandyhe",<br/>
+            "pwd_hash": "pbkdf2:sha256:150000$7aKmozcN$ed4a89b58dc1547baa5bf27c20416d6442554aef9d82a6393035031802226f65",<br/>
+            "email": "mandy2.he@gmail.com"<br/>
+        }<br/>
+    ]<br/>
+
+</p>
+
+<h2>Create new user</h2>
+<p>/api/v1/resource/users/newuser, method: POST: to create a new user from query parameters, <br/>
+    sampple input like this: <br/>
+    /api/v1/resource/users/newuser?username=jeff&password=5678&displayname=Jeff Bezos&email=jbezos@amazon.com&url=https://www.google.com/Jeffbezos<br/>
+</p>
+
+
+<h2>Change a user's password</h2>
+<p>/api/v1/resource/users/password, method: PUT: to change a user's password, input old password then hashed, <br/>
+    if it matches with the stored hash password, it will ask new password then strored the hashed password. <br/>
+    Input query parameter like: <br/>
+    sample call: <br/>
+    /api/v1/resource/users/password?username=mandy&old_password=1234&new_password=5678 <br/>
+</p>
+
+<h2>Retrieve a user profile except the password</h2>
+<p>/api/v1/resource/users/profile, method: GET: to retrieve a user's profile except hashed password. <br/>
+    /api/v1/resource/users/profile?username=mandy <br/>
+    sample response: <br/>
+    [ <br/>
+        "mandy",<br/>
+        "Mandy He",<br/>
+        "mandy2.he@gmail.com",<br/>
+        "https://www.google.com/mandyhe"<br/>
+    ]<br/>
+</p>
+
+<h2>Delete a user</h2>
+<p>
+    /api/v1/resource/users/removal, method: DELETE: to delete a specific user, <br/>
+    input query parameter: /api/v1/resource/users/removal?username=mandy.<br/>
+</p>'''
 
 
 #list all users
