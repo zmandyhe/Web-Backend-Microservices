@@ -9,7 +9,7 @@
           <creator>Josh Gorban</creator>
           <album>You Raise Me Up</album>
           <location>http://127.0.0.1:9000/minio/tracks/WhenYouSayYouLoveMe.mp3</location>
-          <annotation>{&#39;trackdesc&#39;: &#34;Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.&#34;}</annotation>
+          <annotation>Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.</annotation>
         </track>
         
         <track>
@@ -17,7 +17,7 @@
           <creator>Josh Gorban</creator>
           <album>You Raise Me Up</album>
           <location>http://127.0.0.1:9000/minio/tracks/YouRaiseMeUp.mp3</location>
-          <annotation>{&#39;trackdesc&#39;: &#34;Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.&#34;}</annotation>
+          <annotation>Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.</annotation>
         </track>
         
         <track>
@@ -25,7 +25,15 @@
           <creator>Josh Gorban</creator>
           <album>You Raise Me Up</album>
           <location>http://127.0.0.1:9000/minio/tracks/YouRaiseMeUp.mp3</location>
-          <annotation>{&#39;trackdesc&#39;: &#34;Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.&#34;}</annotation>
+          <annotation>Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.</annotation>
+        </track>
+        
+        <track>
+          <title>When You Say You Love Me</title>
+          <creator>Josh Gorban</creator>
+          <album>You Raise Me Up</album>
+          <location>http://127.0.0.1:9000/minio/tracks/WhenYouSayYouLoveMe.mp3</location>
+          <annotation>Like the sound of silence calling,I hear your voice and suddenly I&#39;m falling,Lost in a dream,Like the echoes of our souls are meeting.</annotation>
         </track>
         
     </trackList>

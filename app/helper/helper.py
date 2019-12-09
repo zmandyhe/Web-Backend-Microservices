@@ -5,6 +5,8 @@ import jinja2, sqlite3, uuid
 from itertools import chain
 import json, ast
 
+sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
+sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
 
 # This is a helper function to convert the database rows returned into dictionaries.
 def dict_factory(cursor, row):
