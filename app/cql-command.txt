@@ -1,0 +1,2 @@
+1. Create a keyspace
+CREATE KEYSPACE xspf_playlists WITH replication = {'class': SimpleStrategy, 'replication_factor':1};

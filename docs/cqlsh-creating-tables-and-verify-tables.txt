@@ -1,0 +1,83 @@
+student@tuffix-vm:~/Desktop$ docker start scylla
+scylla
+student@tuffix-vm:~/Desktop$ docker exec -it scylla nodetool status
+Datacenter: datacenter1
+=======================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens       Owns    Host ID                               Rack
+UN  172.17.0.2  0 bytes    256          ?       f2b8de1e-6aa4-4260-8f54-2c91de660771  rack1
+
+Note: Non-system keyspaces don't have the same replication settings, effective ownership information is meaningless
+student@tuffix-vm:~/Desktop$ docker exec -it scylla cqlsh
+
+Warning: cqlshrc config files were found at both the old location (/root/.cqlshrc) and                 the new location (/root/.cassandra/cqlshrc), the old config file will not be migrated to the new                 location, and the new location will be used for now.  You should manually                 consolidate the config files at the new location and remove the old file.
+Connected to  at 172.17.0.2:9042.
+[cqlsh 5.0.1 | Cassandra 3.0.8 | CQL spec 3.3.1 | Native protocol v4]
+Use HELP for help.
+cqlsh> USE xspf
+   ... EXIT
+   ... EXIT;
+Improper USE command.
+cqlsh> USE xspf;
+cqlsh:xspf> CREATE TABLE users_by_username(username text PRIMARY KEY,pwd_hashed text, displayname text, email text, url text);
+cqlsh:xspf> EXIT
+student@tuffix-vm:~/Desktop$ docker exec -it scylla nodetool status
+Datacenter: datacenter1
+=======================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--  Address     Load       Tokens       Owns    Host ID                               Rack
+UN  172.17.0.2  130.27 KB  256          ?       f2b8de1e-6aa4-4260-8f54-2c91de660771  rack1
+
+Note: Non-system keyspaces don't have the same replication settings, effective ownership information is meaningless
+student@tuffix-vm:~/Desktop$ docker exec -it scylla cqlsh
+
+Warning: cqlshrc config files were found at both the old location (/root/.cqlshrc) and                 the new location (/root/.cassandra/cqlshrc), the old config file will not be migrated to the new                 location, and the new location will be used for now.  You should manually                 consolidate the config files at the new location and remove the old file.
+Connected to  at 172.17.0.2:9042.
+[cqlsh 5.0.1 | Cassandra 3.0.8 | CQL spec 3.3.1 | Native protocol v4]
+Use HELP for help.
+cqlsh> USE xspf
+   ... EXIT
+   ... EXIT;
+Improper USE command.
+cqlsh> USE xspf;
+cqlsh:xspf> CREATE TABLE playlists_by_playlist_id_and_username(playlist_id int, playlist_title text, playlist_description text, username text, track_id int, track_title text, track_album text, track_artist text, track_len text, track_media_url text, track_art_url text, track_desc text, PRIMARY KEY(playlist_id,username));
+cqlsh:xspf> SELECT * FROM system_schema.tables WHERE keyspace_name='xspf';
+
+ keyspace_name | table_name                            | bloom_filter_fp_chance | caching                                      | comment | compaction                                | compression                                                               | crc_check_chance | dclocal_read_repair_chance | default_time_to_live | extensions | flags        | gc_grace_seconds | id                                   | max_index_interval | memtable_flush_period_in_ms | min_index_interval | read_repair_chance | speculative_retry
+---------------+---------------------------------------+------------------------+----------------------------------------------+---------+-------------------------------------------+---------------------------------------------------------------------------+------------------+----------------------------+----------------------+------------+--------------+------------------+--------------------------------------+--------------------+-----------------------------+--------------------+--------------------+-------------------
+          xspf | playlists_by_playlist_id_and_username |                   0.01 | {'keys': 'ALL', 'rows_per_partition': 'ALL'} |         | {'class': 'SizeTieredCompactionStrategy'} | {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'} |                1 |                        0.1 |                    0 |           {} | {'compound'} |           864000 | 88320240-1de0-11ea-acb2-000000000000 |               2048 |                           0 |                128 |                  0 |    99.0PERCENTILE
+          xspf |                     users_by_username |                   0.01 | {'keys': 'ALL', 'rows_per_partition': 'ALL'} |         | {'class': 'SizeTieredCompactionStrategy'} | {'sstable_compression': 'org.apache.cassandra.io.compress.LZ4Compressor'} |                1 |                        0.1 |                    0 |           {} | {'compound'} |           864000 | c6861db0-1dd1-11ea-acb2-000000000000 |               2048 |                           0 |                128 |                  0 |    99.0PERCENTILE
+
+(2 rows)
+cqlsh:xspf> SELECT * FROM system_schema.columns WHERE keyspace_name='xspf' AND table_name='users_by_username';
+
+ keyspace_name | table_name        | column_name | clustering_order | column_name_bytes        | kind          | position | type
+---------------+-------------------+-------------+------------------+--------------------------+---------------+----------+------
+          xspf | users_by_username | displayname |             NONE | 0x646973706c61796e616d65 |       regular |       -1 | text
+          xspf | users_by_username |       email |             NONE |             0x656d61696c |       regular |       -1 | text
+          xspf | users_by_username |  pwd_hashed |             NONE |   0x7077645f686173686564 |       regular |       -1 | text
+          xspf | users_by_username |         url |             NONE |                 0x75726c |       regular |       -1 | text
+          xspf | users_by_username |    username |             NONE |       0x757365726e616d65 | partition_key |        0 | text
+
+(5 rows)
+cqlsh:xspf> SELECT * FROM system_schema.columns WHERE keyspace_name='xspf' AND table_name='playlists_by_playlist_id_and_username';
+
+ keyspace_name | table_name                            | column_name          | clustering_order | column_name_bytes                          | kind          | position | type
+---------------+---------------------------------------+----------------------+------------------+--------------------------------------------+---------------+----------+------
+          xspf | playlists_by_playlist_id_and_username | playlist_description |             NONE | 0x706c61796c6973745f6465736372697074696f6e |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |          playlist_id |             NONE |                   0x706c61796c6973745f6964 | partition_key |        0 |  int
+          xspf | playlists_by_playlist_id_and_username |       playlist_title |             NONE |             0x706c61796c6973745f7469746c65 |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |          track_album |             NONE |                   0x747261636b5f616c62756d |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |        track_art_url |             NONE |               0x747261636b5f6172745f75726c |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |         track_artist |             NONE |                 0x747261636b5f617274697374 |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |           track_desc |             NONE |                     0x747261636b5f64657363 |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |             track_id |             NONE |                         0x747261636b5f6964 |       regular |       -1 |  int
+          xspf | playlists_by_playlist_id_and_username |            track_len |             NONE |                       0x747261636b5f6c656e |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |      track_media_url |             NONE |           0x747261636b5f6d656469615f75726c |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |          track_title |             NONE |                   0x747261636b5f7469746c65 |       regular |       -1 | text
+          xspf | playlists_by_playlist_id_and_username |             username |              ASC |                         0x757365726e616d65 |    clustering |        0 | text
+
+(12 rows)
+cqlsh:xspf> 

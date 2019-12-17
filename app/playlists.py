@@ -1,56 +1,20 @@
-# This is the playlist microservice Python script.
+#!/usr/bin/env python3
 
 import flask;
 from flask import request, jsonify, g, Response;
-import sqlite3;
-import json, uuid
-from itertools import chain
+import json
+from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 
 # Here we fire up an instance of our tracks app.
 app = flask.Flask(__name__);
-sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
-sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
 #app.config.from_envvar('APP_CONFIG');
 
-# This is a helper function to convert the database rows returned into dictionaries.
-def dict_factory(cursor, row):
-    d = {};
-    for (idx, col) in enumerate(cursor.description):
-        d[col[0]] = row[idx];
-    return d;
-# End of dict_factory
+def get_db_session():
+    cluster = Cluster(['172.17.0.2'], port=9042)
+    session = cluster.connect('xspf')
+    return session
 
-# This is a helper function to modularize the database connection creation code.
-def get_db():
-    # First see if we have a current instance. If we do, just return it.
-    # If not, then open a connection.
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect("../var/microservices_db.db");
-        db.row_factory = dict_factory;
-    return db;
-# End of get_db()
-
-# This is a special helper function for clean-up detail. Currently, it is only
-# used to tear down the database connection.
-@app.teardown_appcontext
-def close_connection(expection):
-    # This close is similar to the code that sets up the database connection
-    # but now in reverse!
-    db = getattr(g, '_database', None);
-    if db is not None:
-        db.close();
-# End of close_connection
-
-# This is a helper function to check the uniqueness of an entry by checking if
-# the (track,album,artist) tuple is already in the database.
-def check_uniqueness(track, album, artist):
-    cur = get_db().cursor();
-    if cur.execute("SELECT * FROM tracks WHERE title=? AND album=? AND artist=?;",\
-            (track, album, artist)).fetchone() is None:
-        return True;
-    return False;
-# End of check_uniqueness
 
 # This function runs when the user attempts to access the root of this microservice
 # and all it does is spit out the REST API interface for the user to see the
@@ -72,17 +36,6 @@ def tracks_home():
     the playlist already existing in the database or lack of enough required
     data.</p>
 
-    <p>Example Call: <br/>
-        /api/v1/resource/playlists/newplaylist <br/>
-        { <br/>
-            "playlist_id": 1 , <br/>
-            "playlist_title":"Night City", <br/>
-            "track_url":""http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c198"", <br/>
-            "username":"rkretschmar", <br/>
-            "description":"A curated playlist of cyberpunk music for that
-            high-tech, low-life mood.", <br/>
-        }
-    </p>
 
     <h2>Retrieve</h2>
     URL: <i>/api/v1/resource/playlists/profile</i>, METHOD: GET <br/>
@@ -94,35 +47,12 @@ def tracks_home():
     <p>Example Call: <br/>
         /api/v1/resource/playlists/profile?playlist_title=Inspiring Songs&username=mandy <br/>
     <b>Which returns:</b> <br/>
-[
-    {
-        "username": "mandy",
-        "playlist_id": 1,
-        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c1981",
-        "description": "A list Inspirational songs that will help you to stay positive.",
-        "playlist_title": "Inspiring Songs"
-    },
-    {
-        "username": "mandy",
-        "playlist_id": 1,
-        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/991e0424-b4b5-4b26-b3f9-5076487e5e28",
-        "description": "A list Inspirational songs that will help you to stay positive.",
-        "playlist_title": "Inspiring Songs"
-    },
-    {
-        "username": "mandy",
-        "playlist_id": 1,
-        "track_url": "http://127.0.0.1:5000/api/v1/resources/tracks/2239e100-1564-47f9-a189-29e1630db91a",
-        "description": "A list Inspirational songs that will help you to stay positive.",
-        "playlist_title": "Inspiring Songs"
-    }
-]<br/>
     </p>
 
 
     <h2>Delete</h2>
     URL: <i>/api/v1/resource/playlists/removal</i>, METHOD: DELETE <br/>
-    <p>This function allows a user to delete a playlist by playlist_title and username parameters. 
+    <p>This function allows a user to delete a playlist by playlist_title and username parameters.
     This function returns a 200 OK on success, and a 404 Not Found if the record didn't
     exist in the table to begin with.</p>
 
@@ -133,25 +63,38 @@ def tracks_home():
 # End of tracks_home()
 
 
-#function to create a new playlist for a user from query parameter in the api endpoint
+#function to create a new playlist
 @app.route('/api/v1/resource/playlists/newplaylist',methods=['POST'])
 def create_new_playlist():
-    conn = get_db()
-    cur = conn.cursor()
+    session = get_db_session()
     query_parameters = request.args
     playlist_id_string= query_parameters.get("playlist_id")
     playlist_id = int(playlist_id_string)
     playlist_title = query_parameters.get("playlist_title")
-    track_url = query_parameters.get("track_url")
+    playlist_description = query_parameters.get("playlist_description")
     username = query_parameters.get("username")
-    description = query_parameters.get("description")
-    if playlist_id_string is not None and playlist_title is not None and track_url is not None and username is not None:
+    track_id_string = query_parameters.get("track_id")
+    track_id = int(track_id_string)
+    track_title = query_parameters.get("track_title")
+    track_album = query_parameters.get("track_album")
+    track_artist = query_parameters.get("track_artist")
+    track_len = query_parameters.get("track_len")
+    track_media_url =  query_parameters.get("track_media_url")
+    track_art_url =  query_parameters.get("track_art_url")
+    track_desc = query_parameters.get("track_desc")
+
+    if playlist_id_string is not None and playlist_title is not None and username is not None:
         try:
-            playlist = (playlist_id, playlist_title,track_url,username,description)
-            execute_string = "INSERT INTO playlists (playlist_id,playlist_title,track_url,username,description) VALUES (?,?,?,?,?);"
-            result = cur.execute(execute_string, playlist)
-            conn.commit()
-            cur.close()
+            playlist = (playlist_id, playlist_title,playlist_description, username, track_id, track_title, \
+                        track_album, track_artist, track_len, track_media_url, track_art_url, track_desc)
+            session.execute(
+                """
+                INSERT INTO playlists_by_playlist_id_and_username(playlist_id, playlist_title,playlist_description, username, track_id, track_title, \
+                            track_album, track_artist, track_len, track_media_url, track_art_url, track_desc)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                playlist
+            )
             #if items is None:
             return "<h1>Success!</h1><p>Congrat</p>", 201
             #else:
@@ -162,46 +105,42 @@ def create_new_playlist():
         return ("input query parameters")
 
 
-#retrieve all playlist from a user by playlist title and username
+#retrieve all playlist from a user by playlist id
 @app.route('/api/v1/resource/playlists/profile', methods = ['GET'])
 def get_user_profile():
-    conn = get_db()
-    cur = conn.cursor()
+    session = get_db_session()
     query_parameters = request.args
-    playlist_title = query_parameters.get("playlist_title")
-    username = query_parameters.get("username")
-    query = "SELECT playlist_id, playlist_title, track_url, username, description FROM playlists WHERE playlist_title=? AND username=?"
-    result = cur.execute(query, (playlist_title,username))
-    items = cur.fetchall()
-
-    # guid = [item.get("guid") for item in items]
-    # print(type(guid))
-    cur.close()
-    if items is None:
+    playlist_id_query_string = query_parameters.get("playlist_id_string")
+    playlist_id_query = int(playlist_id_query_string)
+    session.row_factory = dict_factory
+    query = "SELECT * FROM playlists_by_playlist_id_and_username WHERE playlist_id= %s"
+    rows = session.execute(query,[playlist_id_query])
+    print(rows)
+    if rows is None:
         return page_not_found(404)
     else:
-        return Response(json.dumps(items),mimetype="application/json",status=200)
-        # return items
-  
+        data = []
+        for row in rows:
+            data.append(row)
+        print(data)
+        print(json.dumps(data))
+        return Response(json.dumps(data, indent=4, sort_keys=False), 200, {'Content-Type': 'application/json'})
 
-#delete a user's playlist
-#query parameters: e.g. username=HLMN, playlist_title=Trending
+
+#delete a user's playlist by playlist id
 @app.route('/api/v1/resource/playlists/removal', methods = ['DELETE'])
 def delete_user():
-    conn = get_db()
-    cur = conn.cursor()
-    username = request.args.get('username')
-    playlist_title = request.args.get('playlist_title')
-    if username is not None and playlist_title is not None:
+    session = get_db_session()
+    query_parameters = request.args
+    playlist_id_query_string = query_parameters.get("playlist_id_string")
+    playlist_id_query = int(playlist_id_query_string)
+    if playlist_id_query_string is not None:
         try:
-            query = ''' DELETE FROM playlists WHERE playlist_title =? AND username = ?'''
-            cur.execute(query,(playlist_title,username))
-            conn.commit()
-            cur.close()
+            query = "DELETE FROM playlists_by_playlist_id_and_username WHERE playlist_id = %s"
+            session.execute(query,[playlist_id_query])
             return Response( "200 OK,The user's playlist is deleted successfully", headers={'Content-Type':'application/json'},status=200)
         except Exception as err:
             return ('Query Failed: %s\nError: %s' % (''' DELETE FROM playlists''', str()))
-    return ("input playlist_title and username as query parameters")
 
 
 # This will be a special function that is a generic File Not Found error
@@ -215,5 +154,5 @@ def page_not_found(e):
 # End of page_not_found
 
 # Finally, spin up our little app!
-# app.run(debug=True, port=8080);
+# app.run(debug=True, port=5100);
 app.run()

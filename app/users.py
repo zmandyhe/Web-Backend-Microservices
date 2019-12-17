@@ -1,27 +1,30 @@
+#!/usr/bin/env python3
+
 from flask import Flask, request, jsonify, g, Response
 import sqlite3
 import json
 from werkzeug.security import generate_password_hash,check_password_hash
 from os.path import isfile
+from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 
 app = Flask(__name__)
 #app.config.from_envvar('APP_CONFIG')
 
 
-"""
-helper functions
-"""
+# This is a helper function to modularize the database connection
+def get_db_session():
+    cluster = Cluster(['172.17.0.2'], port=9042)
+    session = cluster.connect('xspf')
+    return session
+
+
+# """
+# helper functions
+# """
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
-
-#for test purpose, only convert 1 row of json data
-def convert_to_json():
-    with open('users/newuser.txt') as json_file:
-        data = json.load(json_file)
-        desc=(data["username"],data["pwd_hash"],data["displayname"],data["email"],data["url"])
-        desc={"username": data["username"], "pwd_hash": data["pwd_hash"],"displayname": data["displayname"],"email": data["email"],"url":data["url"]}
-    return desc
 
 
 #homepage
@@ -86,130 +89,118 @@ sample call: <br/>
 </p>'''
 
 
-#list all users
+# #list all users
 @app.route('/api/v1/resource/users/all', methods=['GET'])
 def list_all_users():
-    if request.method == 'GET':
-        conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
-        cur = conn.cursor()
-        query = "SELECT * FROM users"
-        result = cur.execute(query)
-        items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-        cur.close()
-    if items is None:
+    session = get_db_session()
+    session.row_factory = dict_factory
+    rows = session.execute("SELECT username,displayname,email,url FROM users_by_username")
+    if rows is None:
         return page_not_found(404)
     else:
-        return Response(json.dumps(items, sort_keys=False), 200, {'Content-Type': 'application/json'})
+        data = []
+        for row in rows:
+            data.append(row)
+        return Response(json.dumps(data, indent=4, sort_keys=False), 200, {'Content-Type': 'application/json'})
 
 
 #function to create a new user from query parameter in the api endpoint
 @app.route('/api/v1/resource/users/newuser',methods=['POST'])
-def sql_create_user_by_input():
-    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
-    # conn = sqlite3.connect('users/users.db', check_same_thread=False)
-    cur = conn.cursor()
+def create_a_user():
+    session = get_db_session()
     query_parameters = request.args
     username = query_parameters.get("username")
     password = query_parameters.get("password")
     displayname = query_parameters.get("displayname")
     email = query_parameters.get("email")
     url = query_parameters.get("url")
-    pwd_hash = generate_password_hash(password)
-    # newuser_dict={"username":username,
-    #             "pwd_hash": pwd_hash,
-    #              "displayname": displayname,
-    #              "email": email,
-    #              "url":url}
-    if username is not None and pwd_hash is not None and displayname is not None and email is not None:
+    pwd_hashed = generate_password_hash(password)
+    if username is not None and pwd_hashed is not None and displayname is not None and email is not None:
         try:
-            user = (username, pwd_hash, displayname,email,url)
-            result = cur.execute(''' INSERT INTO users (username,pwd_hash,displayname,email,url) VALUES (?,?,?,?,?) ''', user )
-            conn.commit()
-            cur.close()
-            return Response("<h1>Success</h1>",headers={'Content-Type':'application/json'},status=201)
+            user = (username, pwd_hashed, displayname,email,url)
+            session.execute(
+                """
+                INSERT INTO users_by_username (username, pwd_hashed, displayname,email,url)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                user
+            )
+            return ("<h2>Success, new user has been successfully created!</h2>",201)
         except Exception as err:
-            return ('Query Failed: %s\nError HTTP 409 Conflict., username and email must be unique %s' % (''' INSERT INTO users''', str()))
+            return ("Query of insert failed")
     else:
         return ("input query parameter")
 
 
-#function to update a user's password
+# #function to update a user's password
 @app.route('/api/v1/resource/users/password',methods = ['PUT'])
-def sql_dataedit_password():
-    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
-    cur = conn.cursor()
+def edit_user_password():
+    session = get_db_session()
+    session.row_factory = dict_factory
     query_parameters = request.args
-    username = query_parameters.get("username")
+    username1 = query_parameters.get("username")
     pw_old = query_parameters.get("old_password")
-    if username is not None and pw_old is not None:
-        query1 = ''' SELECT username, pwd_hash, displayname, email, url FROM users WHERE username = ?'''
-        result1= cur.execute(query1,(username,))
+    if username1 is not None and pw_old is not None:
+        query1 = "SELECT * FROM users_by_username WHERE username = %s"
+        result1= session.execute(query1,[username1])
         if result1 is None:
             return "user is not in the database"
         else:
-            result= cur.fetchall()
-            items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-            username_stored = items[0]['username']
-            if username_stored != username:
+            username_stored = result1[0]['username']
+            if username_stored != username1:
                 return"username is not in the database yet, you may want to create a username"
             else:
-                pw_old_stored = items[0]["pwd_hash"]
+                pw_old_stored = result1[0]["pwd_hashed"]
                 is_valid = check_password_hash(pw_old_stored,pw_old)
                 if is_valid:
                     new_pw = query_parameters.get("new_password")
                     new_pw_hashed = generate_password_hash(new_pw)
                     try:
-                        result2=cur.execute(''' UPDATE users set pwd_hash=? WHERE pwd_hash=? ''', (new_pw_hashed,pw_old_stored))
-                        conn.commit()
-                        cur.close()
-                        # items = [dict(zip([key[0] for key in cur.description], row)) for row in result2]
-                        # if items is None:
-                        #     return page_not_found(404)
-                        # else:
+                        session.execute("UPDATE users_by_username SET pwd_hashed=%s WHERE username= %s", (new_pw_hashed,username1))
                         return Response("200 OK,The user password is changed successfully", headers={'Content-Type':'application/json'},status=200)
                     except Exception as err:
-                        return ('Query Failed: %s\nError: %s' % (''' UPDATE INTO users''', str()))
+                        return ('Query Failed: %s\nError: %s' % (''' UPDATE INTO users_by_username''', str()))
                 else:
                     return "password does not match"
-        # return "input username and password in the request parameter starting with ?", 404
     return "input request parameters:username and password"
+
 
 #retrieve a user's profile
 @app.route('/api/v1/resource/users/profile', methods = ['GET'])
 def get_user_profile():
-    # conn = sqlite3.connect('users/users.db', check_same_thread=False)
-    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
-    cur = conn.cursor()
+    session = get_db_session()
     query_parameters = request.args
     username = query_parameters.get("username")
-    query = "SELECT username,displayname,email,url FROM users WHERE username=?"
-    result = cur.execute(query, (username,))
-    r = result.fetchone()
-    cur.close()
-    if r is None:
-        return "this username is not in the database"
+    session.row_factory = dict_factory
+    query = "SELECT username, displayname, email, url FROM users_by_username WHERE username= %s"
+    rows = session.execute(query,[username])
+    if rows is None:
+        return page_not_found(404)
     else:
-        return Response(json.dumps((r), sort_keys=False),headers={'Content-Type':'application/json'},status=200)
+        data = []
+        for row in rows:
+            data.append(row)
+        print(json.dumps(data))
+        return Response(json.dumps(data, indent=4, sort_keys=False), 200, {'Content-Type': 'application/json'})
 
 
 #delete a user
 @app.route('/api/v1/resource/users/removal', methods = ['DELETE'])
 def delete_user():
-    conn = sqlite3.connect('../var/microservices_db.db', check_same_thread=False)
-    cur = conn.cursor()
+    session = get_db_session()
     username = request.args.get('username')
-    if username is not None:
+    if username is None:
+        return ("input username as a query parameter")
+    else:
         try:
-            query = ''' DELETE FROM users where username = ?'''
-            cur.execute(query,(username,))
-            conn.commit()
-            cur.close()
+            query = "DELETE FROM users_by_username WHERE username = %s"
+            session.execute(query,[username])
             return Response( "200 OK,The user is deleted successfully", headers={'Content-Type':'application/json'},status=200)
         except Exception as err:
             return ('Query Failed: %s\nError: %s' % (''' DELETE FROM users''', str()))
-    return ("input username as a query parameter")
+
 
 
 app.run()
 # if __name__ == "__main__":
-#     app.run(debug=True)
+#     app.run(debug=True, port=5200)

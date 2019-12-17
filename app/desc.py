@@ -1,47 +1,24 @@
 from flask import Flask, request, jsonify, g, Response
-import sqlite3
 import json
-from werkzeug.security import generate_password_hash,check_password_hash
-#from os.path import isfile
+from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 
 
 app = Flask(__name__)
 #app.config.from_envvar('APP_CONFIG')
 
+
+# This is a helper function to modularize the database connection
+def get_db_session():
+    cluster = Cluster(['172.17.0.2'], port=9042)
+    session = cluster.connect('xspf')
+    return session
+
+
 '''helper function'''
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource could not be found.</p>", 404
-
-# This is a helper function to convert the database rows returned into dictionaries.
-def dict_factory(cursor, row):
-    d = {};
-    for (idx, col) in enumerate(cursor.description):
-        d[col[0]] = row[idx];
-    return d;
-# End of dict_factory
-
-# This is a helper function to modularize the database connection creation code.
-def get_db():
-    # First see if we have a current instance. If we do, just return it.
-    # If not, then open a connection.
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect("../var/microservices_db.db");
-        db.row_factory = dict_factory;
-    return db;
-# End of get_db()
-
-# This is a special helper function for clean-up detail. Currently, it is only
-# used to tear down the database connection.
-@app.teardown_appcontext
-def close_connection(expection):
-    # This close is similar to the code that sets up the database connection
-    # but now in reverse!
-    db = getattr(g, '_database', None);
-    if db is not None:
-        db.close();
-# End of close_connection
 
 
 '''homepage'''
@@ -61,77 +38,79 @@ def home():
             /api/v1/resource/tracks , METHOD: POST<br/>
             { <br/>
                 "username":"mandy", <br/>
-                "track_url":"http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c198", <br/>
+                "track_id": 004, <br/>
                 "trackdesc":"Like the sound of silence calling,I hear your voice and suddenly I'm falling,Lost in a dream,Like the echoes of our souls are meeting." <br/>
             }
         </p>
 
         <h2>Retrieve</h2>
         URL: <i>/api/v1/resources/desc/profile</i>, METHOD: GET <br/>
-        <p>This function allows you to retrieve a track's description from the tracks table. The user
+        <p>This function allows you to retrieve a track's description. The user
         will perform a GET request on the tracks endpoint, and it will take the search
         parameters of track_url. It returns a 200 and the data
         if the data is in the table, and a 404 with an error message if not.
 
         <p>Example Call: <br/>
-            /api/v1/resource/tracks?track_url="http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c198" <br/>
+            /api/v1/resource/tracks?track_id=004 <br/>
         <b>Which returns:</b> <br/>
             { <br/>
                 "username":"mandy", <br/>
-                "track_url":"http://127.0.0.1:5000/api/v1/resources/tracks/b7c25310-6750-4c2b-91a9-eaf44b0c198", <br/>
+                "track_id": 004, <br/>
                 "trackdesc":"Like the sound of silence calling,I hear your voice and suddenly I'm falling,Lost in a dream,Like the echoes of our souls are meeting." <br/>
             }
         </p>'''
 
 
 #endpoint to retrieve a user description of a track description'
+# it shares the table of playlists_by_playlist_id_and_username
+#when playlist is not created, it assigns the playlist_id = 0
 @app.route('/api/v1/resources/desc/profile', methods = ['GET'])
-def get_user_profile():
-    conn = get_db()
-    cur = conn.cursor()
+def get_track_profile():
+    playlist_id = 0
+    session = get_db_session()
     query_parameters = request.args
-    # username = query_parameters.get("username")
-    track_url= query_parameters.get("track_url")
-    if track_url is not None:
-        # query = "SELECT username,track_url,trackdesc FROM desc WHERE username=username AND track_url=track_url"
-        query = "SELECT trackdesc FROM desc WHERE track_url=track_url"
-        result = cur.execute(query)
-        #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-        items = cur.fetchone()
-        cur.close()
-        if items is None:
-            return page_not_found(404)
-        else:
-            return Response(json.dumps(items, sort_keys=False),headers={'Content-Type':'application/json'},status=200)
+    track_id_s = query_parameters.get("track_id_string")
+    track_id = int(track_id_s)
+    username_query = query_parameters.get("username")
+    session.row_factory = dict_factory
+    query = "SELECT * FROM playlists_by_playlist_id_and_username WHERE playlist_id=%s AND track_id=%s AND username= %s"
+    rows = session.execute(query,(playlist_id, track_id, username_query))
+    if rows is None:
+        return page_not_found(404)
     else:
-        return ("input query parameter with track_url= track_url")
+        data = []
+        for row in rows:
+            data.append(row)
+        print(json.dumps(data))
+        return Response(json.dumps(data, indent=4, sort_keys=False), 200, {'Content-Type': 'application/json'})
 
 
 #function to set a track's description by a user
 @app.route('/api/v1/resources/desc/newdesc',methods=['POST'])
-def sql_set_desc():
-    # conn = sqlite3.connect('desc.db', check_same_thread=False)
-    conn = get_db()
-    cur = conn.cursor()
+def create_track_desc():
+    session = get_db_session()
     query_parameters = request.args
+    playlist_id = 0
+    track_id = int(query_parameters.get("track_id_string"))
     username = query_parameters.get("username")
-    trackdesc = query_parameters.get("trackdesc")
-    track_url = query_parameters.get("track_url")
-    track_desc = (username,trackdesc,track_url)
-    # desc_dict = convert_to_json()
-    # user_desc = (desc_dict["username"], desc_dict["tracktitle"],desc_dict["trackdesc"])
-    cur.execute(''' INSERT INTO desc (username,trackdesc,track_url) VALUES (?,?,?) ''', track_desc)
-    conn.commit()
-    #items = [dict(zip([key[0] for key in cur.description], row)) for row in result]
-    items = cur.fetchall()
-    cur.close()
-    if items is None:
-        return page_not_found(404)
+    desc = query_parameters.get("track_desc")
+    if username is not None and track_id is not None and desc is not None:
+        try:
+            trackdesc = (playlist_id, track_id, username, desc)
+            session.execute(
+                """
+                INSERT INTO playlists_by_playlist_id_and_username (playlist_id, track_id, username, track_desc)
+                VALUES (%s, %s, %s, %s)
+                """,
+                trackdesc
+            )
+            return ("<h2>Success, new track description has been successfully created!</h2>",201)
+        except Exception as err:
+            return ("Query of insert failed")
     else:
-        #return items
-        return Response(json.dumps(track_desc, indent=4),mimetype="application/json",status=201)
+        return ("input query parameter")
 
 
-app.run()
 # if __name__ == "__main__":
 #     app.run(debug=True, port=6789)
+app.run()

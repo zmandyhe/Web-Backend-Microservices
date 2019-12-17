@@ -6,72 +6,97 @@
 
 ##### Design Decisions:
     * We will be using vanilla Flask for the web framework.
-    * We will be using sqlite3 for our database.
+    * We will be using ScyllaDB, A Cassandra type of wide columndatabase.
     * We will be using a Linux-like directory structure for our project. (See Project Structure for more information)
 
 ##### Project Structure:
     * etc/ will contain all of the configuration files.
     * bin/ will contain all of the scripts to aid in the project.
     * app/ will contain all of the python code to our microservices.
+      -xspf.py
+      -users.py
+      -tracks.py
+      -playlists.py
+      -desc.py
     * lib/ will contain various libraries (or libary-type files).
-    * var/ will contain various changing files; most importatly, the database files.
+    * var/ will contain various changing files; we keeps the project 2 Sqlite3 database files there.
     * media/ will contain the individual music files and the album art.
+    * docs/ contains screenshots for memcached before/afteer and microservices operations screenshots.
 
 ##### Database Structure:
-Starting with Project 2, we were to implement sharding of the "tracks" database. Three in total. And then there will be one database for the other data, namely the users, playlist, and description tables. The databases, stored in the var/, are named:
-    * tracks\_shard0.db
-    * tracks\_shard1.db
-    * tracks\_shard2.db
-    * microservices\_db.db
+The keyspace of "xspf" has 2 Cassandra tables as follows. Visit ../docs/cqlsh-creating-tables-and-verify-tables.txt to view two tables structures.
+  -users_by_username
+  -playlists_by_playlist_id_and_username
 
 #### Environment
-    - Flask (both the python library and the commandline utility)
+    - Flask
     - foreman
     - dot-env
-    - sqlite3
-    - Kong API Gateway
-    - MinIO Object Storage
-    - Jinja2 
+    - Jinja2
     - requests
     - memcached and pymemcache
+    - Docker
+    - ScyllaDB
+    - Cassandra
+    - DataStax's Python Driver for Apache Canssandra
+    - MinIO Object Storage
+    - Kong API Gateway
 
+#### Steps to generate n the XSPF playlist:
+    1. start the scylla database from any directory, then verify it do start:
+    ```
+    $docker start scylla
+    $docker exec -it scylla nodetool status
+    ```
+    2. Start the memcache server running on local host with port number of 11211
+    ```
+    sudo service memcached start
+    ```
+    record the memcache statistics before and after the xspf service uses memcache.
+    ```
+    $ telnet localhost 11211
+      stats
+    ```
+    3. Run the 4 backend microservices and the xspf playlist service, migrate to the bin/ directory, run the Procfile through foreman of "foreman start", the 4 microservices will run three instances each all on separate ports. To get the xspf playlist xml output, visit:
+    http://127.0.0.1:5400/playlist/1
+      ```
+      foreman start
+      ```
+      ports assignments are:
+      ```
+      21:31:46 users.1     |  * Running on http://127.0.0.1:5200/
+      21:31:46 tracks.1    |  * Running on http://127.0.0.1:5000/
+      21:31:46 playlists.1 |  * Running on http://127.0.0.1:5100/
+      21:31:46 desc.1      |  * Running on http://127.0.0.1:5300/
+      ```
 
-#### Run the XSPF playlist service, refer to below steps:
-##### TO Run the services, following this process
-There are a few scripts and configuration files to help get a new environment ready to go for our microservices. Most of them are locked up in bin/ and etc/, respectively. Here are the steps to set-up the
-flask environment and the database with the schema needed to move forward:
-
-##### To run the services, following this following steps:
-    1. To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a script empty\_sharded\_db.sh which
-    you can just run and it'll get a series fresh database files for you to work with.
-    2. To run the 4 microservices, migrate to the bin/ directory, run the Procfile through foreman of "foreman start", the 4 microservices will run three instances each all on separate ports.
-    3. The next thing to start is Kong. The Kong start and initialization scripts are kept with the other scripts in the bin/ directory. First run the *start_kong* script (this requires superuser privileges). Then run all of the initializations scripts to set up all the Upstreams, the Targets, the Services, and the Routes. It doesn't matter in which order you run that, just make sure they're all executed once.
-    4. To start MINIO: go to /Minio folder with executable file and sub-folders, then to go terminal, and
-	run minio:
-	"./minio server start object storage server"
-      Minio server will run at http://127.0.0.1:9000, and mp3 files are stored in th folder of /tracks
+    4. Run xspf.py from ./app/xspf.py as follows. The service is running on http://127.0.0.1:5400/playlist/1. The output file is xspf-playlist_1.xml.
+    ```
+    python3 xspf.py
+    ```
+    5. Media data has been saved to MiNIO remote server. To start MINIO: go to /Minio folder with executable file and sub-folders, then to go terminal, and run minio as the following:
+    ```
+	   ./minio server start object storage server
+    ```
+      Minio server will run at http://127.0.0.1:9000, and mp3 files are stored in the folder of /tracks
       Use the following credentials to access the minio server bucket:
-         -AccessKey: 54AUW87M5DUD0B9UBR1X 
-         -SecretKey: s28mRRzRRhJcJv84MxzEyNaVt2nTwejSkWuGoBr8 
-    5. The xspf.py has scripted to automatically start the memcache server running on local host with port number of 11211
-    6. to generate a xspf playlist, the script is located in /app/xspf.py. Go to /app folder, from terminal, run "python xspf.py", it will run in local host.
-       run this endpoint: http://127.0.0.1:1234/playlist/1. The sample playlist xml file is xspf-playlist.xml.
-
-#### xspf Microservice:
-    *to run it, go to /app
-    *in terminal, run: python xspf.py
-    *http://127.0.0.1:1234/playlist/1 to generate a xspf playlist.
-
-#### Environment
-    * Make sure that you have Flask (both the python library and the commandline utility), foreman, dot-env, and sqlite3 downloaded and installed.
-    * To spin up a new database with the appropiate schema, under bin/db\_scripts/new there is a empty empty\_sharded\_db.sh which
-    you can just run and it'll get a fresh database file for you to work with.
-    * After that, migrate to the bin/ directory, run the Procfile through foreman.
-    * Finally, you are ready to enjoy.
+      ```
+         -AccessKey: 54AUW87M5DUD0B9UBR1X
+         -SecretKey: s28mRRzRRhJcJv84MxzEyNaVt2nTwejSkWuGoBr8
+      ```
+#### Query Screenshots
+  There are some saved screenshots during the CRUD process from each microservices' http endpoints.
+  They are under ../docs/
+  - users
+  - playlists
+  - tracks
+  - desc
+  - memcached
+  - xspf playlists xml
 
 #### xspf Microservice:
 xspf.py: To generate a xspf playlist, the script is located in /app/xspf.py. Go to /app folder, from terminal, run "python xspf.py", it will run in local host.
-run this endpoint: http://127.0.0.1:8080/playlist/1. The sample playlist xml file is xspf-playlist.xml.
+run this endpoint: http://127.0.0.1:5400/playlist/1. The sample playlist xml file is xspf-playlist.xml.
 
 ##### Tracks Microservice:
 tracks.py: To learn more about the Tracks API and how to use it, please refer to the root page of the microservice after starting it up. It will have the most up-to-date information on all the new features and a general

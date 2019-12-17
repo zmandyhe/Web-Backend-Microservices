@@ -4,9 +4,11 @@ from flask import render_template, Flask,  make_response, g, Response, jsonify
 import jinja2, sqlite3, uuid
 from itertools import chain
 import json, ast
+from uuid import UUID
 
 sqlite3.register_converter('GUID', lambda b: uuid.UUID(bytes_le=b))
-sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
+# sqlite3.register_adapter(uuid.UUID, lambda u: buffer(u.bytes_le))
+sqlite3.register_adapter(uuid.UUID, lambda u: u.bytes_le)
 
 # This is a helper function to convert the database rows returned into dictionaries.
 def dict_factory(cursor, row):
@@ -38,19 +40,20 @@ def get_db_by_uuid(which_db):
 
 #have to call here, as calling from tracks.py endpoint does not work
 def get_track_data(track_guid):
-	global title,artist,album,length,media_url
-	which_db = get_which_db(track_guid)
-	conn = get_db_by_uuid(which_db)
-	cur = conn.cursor()
-	query = "SELECT * FROM tracks WHERE guid = ?;"
-	item = cur.execute(query, (track_guid,))
-	results = cur.fetchone()
-	cur.close()
+    global title,artist,album,length,media_url
+    which_db = get_which_db(track_guid)
+    conn = get_db_by_uuid(which_db)
+    cur = conn.cursor()
+    query = '''SELECT * FROM tracks WHERE guid = ?'''
+    print(track_guid, type(track_guid))
+    item = cur.execute(query, (track_guid,))
+    results = cur.fetchone()
+    cur.close()
 
-	if results:
-		title = results["title"]
-		artist = results["artist"]
-		album = results["album"]
-		length = results["len"]
-		media_url = results["media_url"]
-	return title,artist,album,length,media_url
+    if results:
+        title = results["title"]
+        artist = results["artist"]
+        album = results["album"]
+        length = results["len"]
+        media_url = results["media_url"]
+    return title,artist,album,length,media_url
