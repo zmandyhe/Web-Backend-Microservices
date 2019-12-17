@@ -25,8 +25,8 @@
 
 ##### Database Structure:
 The keyspace of "xspf" has 2 Cassandra tables as follows. Visit ../docs/cqlsh-creating-tables-and-verify-tables.txt to view two tables structures.
-  -users_by_username
-  -playlists_by_playlist_id_and_username
+  * users_by_username
+  * playlists_by_playlist_id_and_username
 
 #### Environment
     - Flask
@@ -42,7 +42,7 @@ The keyspace of "xspf" has 2 Cassandra tables as follows. Visit ../docs/cqlsh-cr
     - MinIO Object Storage
     - Kong API Gateway
 
-#### Steps to generate n the XSPF playlist:
+#### Steps to generate a XSPF playlist:
     1. start the scylla database from any directory, then verify it do start:
     ```
     $docker start scylla
