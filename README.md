@@ -1,5 +1,5 @@
 ### Web Backend Engineering
-### The group members for this group are: Mandy He and RJ Kretscmar.
+### Contributors: Mandy He and RJ Kretscmar.
 
 #### The information in this file will reflect different assumptions, instructions, and other meta-data of our project.
 
